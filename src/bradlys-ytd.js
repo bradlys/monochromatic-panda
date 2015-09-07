@@ -166,7 +166,6 @@ function getYouTubeVideos() {
 	}
 	//grab the videos out of the ytplayer variable
 	var YTPlayerVideos = ytplayer.config.args.url_encoded_fmt_stream_map.split(',');
-	//parse out the information for each video and put it into the videos variable
 	var videos = [];
 	//get the video title if it exists
 	var videoTitle = document.getElementById('watch-headline-title');
@@ -175,6 +174,7 @@ function getYouTubeVideos() {
 	} else {
 		videoTitle = 'YouTube Video';
 	}
+	//parse out the information for each video and put it into the videos variable
 	for (var index in YTPlayerVideos) {
 		//split up the elements that make up the info for the video element
 		var currentVideo = YTPlayerVideos[index].split('&');
