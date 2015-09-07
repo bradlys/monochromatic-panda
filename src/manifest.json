@@ -1,0 +1,17 @@
+{
+	"manifest_version": 2,
+	"name": "Bradly's YouTube Downloader",
+	"version": "0.1",
+	"description": "Download YouTube videos without pain",
+	"homepage_url": "http://bradly.me/",
+	"update_url": "http://bradly.me/YTDUpdates.xml",
+	"permissions": ["http://*.youtube.com/*"],
+	"content_security_policy": "default-src 'self' ",
+	"content_scripts": [
+		{
+			"matches": ["https://*.youtube.com/*"],
+			"js": ["bradlys-ytd-injector.js"]
+		}
+	],
+	"web_accessible_resources": ["bradlys-ytd.js"]
+}
