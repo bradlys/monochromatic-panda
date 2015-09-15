@@ -11,4 +11,4 @@ Feel free to modify this extension to your heart's content and let me know of an
 To use this extension: download the source, go to the chrome extensions settings page (chrome://extensions/), enable developer mode (it's in the extensions page on top right), and click unload packed extension. Navigate to where you downloaded the source and load it up! Good luck!
 
 #Now Available on Chrome Web Store
-[Bradly's YouTube Downloader](https://chrome.google.com/webstore/detail/bradlys-youtube-downloade/iegohpghbappmilohemkdpknmbcpbldb/related?hl=en-US&gl=US)
+[Bradly's YouTube Downloader](https://chrome.google.com/webstore/detail/bradlys-youtube-downloade/iegohpghbappmilohemkdpknmbcpbldb?hl=en-US&gl=US)
