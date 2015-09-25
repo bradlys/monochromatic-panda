@@ -19,9 +19,9 @@ function createYouTubeDownloader() {
 		|| typeof ytplayer.config.args.url_encoded_fmt_stream_map === 'undefined' || ytplayer.config.args.url_encoded_fmt_stream_map === null) {
 		return null;
 	}
-	var videos = getYouTubeVideos();
+	var regularAndAdaptiveVideos = getYouTubeVideos();
 	//if no videos are returned then we don't need to create the youtube downloader element
-	if (videos === []) {
+	if (regularAndAdaptiveVideos === []) {
 		clearInterval(timerID);
 		return null;
 	}
@@ -31,45 +31,62 @@ function createYouTubeDownloader() {
 		'<button class="yt-uix-button yt-uix-button-size-default yt-uix-button-opacity yt-uix-button-has-icon no-icon-markup pause-resume-autoplay yt-uix-menu-trigger yt-uix-tooltip" type="button" onclick=";return false;" aria-pressed="false" role="button" title="Download" aria-haspopup="true" data-tooltip-text="Download" aria-labelledby="yt-uix-tooltip44-arialabel" aria-controls="aria-menu-id-99">' +
 			'<span class="yt-uix-button-content">Download</span>' +
 		'</button>' + 
-			'<div class="yt-uix-menu-content yt-ui-menu-content yt-uix-kbd-nav yt-uix-menu-content-hidden" role="menu" aria-expanded="false" id="aria-menu-id-99" style="min-width: 69px;">' +
-				'<ul tabindex="0" class="yt-uix-kbd-nav yt-uix-kbd-nav-list">';
+		'<div class="yt-uix-menu-content yt-ui-menu-content yt-uix-kbd-nav yt-uix-menu-content-hidden" role="menu" aria-expanded="false" id="aria-menu-id-99" style="min-width: 69px;">' +
+			'<ul tabindex="0" class="yt-uix-kbd-nav yt-uix-kbd-nav-list">';
 	//For each video, create a corresponding list object and add it to the YTD Element
-	for (var index in videos) {
-		var video = videos[index];
-		var url = video.url;
-		var visibleText = '';
-		if ('height' in video && 'width' in video) {
-			visibleText = video['width'] + 'x' + video['height'] + 'p';
-		} else if ('height' in video) {
-			visibleText = video['height'] + 'p';
-		} else if ('width' in video) {
-			visibleText = video['width'] + 'x???';
-		} else {
-			visibleText = 'Unknown Resolution';
+	var count = 0;
+	for (var raavi in regularAndAdaptiveVideos){
+		var videos = regularAndAdaptiveVideos[raavi];
+		if (count === 1){
+			YTDElement += 
+			'<div class="yt-uix-menu">' +
+				'<button class="yt-uix-button yt-uix-button-size-default yt-uix-button-opacity yt-uix-button-has-icon no-icon-markup pause-resume-autoplay yt-uix-menu-trigger yt-uix-tooltip" type="button" onclick=";return false;" aria-pressed="false" role="button" title="Alternative Formats (experimental)" aria-haspopup="true" data-tooltip-text="Alternative Formats (experimental)" aria-labelledby="yt-uix-tooltip44-arialabel" aria-controls="aria-menu-id-999">' +
+					'<span class="yt-uix-button-content">Alternative Formats (experimental) --></span>' +
+				'</button>' + 
+				'<div class="yt-uix-menu-content yt-ui-menu-content yt-uix-kbd-nav yt-uix-menu-content-hidden" role="menu" aria-expanded="false" id="aria-menu-id-999" style="min-width: 69px;">' +
+					'<ul tabindex="0" class="yt-uix-kbd-nav yt-uix-kbd-nav-list">';
 		}
-		if ('fps' in video) {
-			visibleText = ' ' + video['fps'] + 'fps';
-		}
-		if ('ext' in video) {
-			visibleText += ' ' + video['ext'];
-		}
-		if ('format_note' in video) {
-			visibleText += ' ' + video['format_note'];
-		}
-		if ('abr' in video) {
-			visibleText += ' ' + video['abr'] + 'kbps';
-		}
-		if ('flags' in video) {
-			for (var flagIndex in video['flags']) {
-				visibleText += ' ' + video['flags'][flagIndex];
+		for (var index in videos) {
+			var video = videos[index];
+			var url = video.url;
+			var visibleText = '';
+			if ('height' in video && 'width' in video) {
+				visibleText = video['width'] + 'x' + video['height'] + 'p';
+			} else if ('height' in video) {
+				visibleText = video['height'] + 'p';
+			} else if ('width' in video) {
+				visibleText = video['width'] + 'x?';
+			} else {
+				visibleText = '?x?';
 			}
+			if ('fps' in video) {
+				visibleText += ' ' + video['fps'] + 'fps';
+			}
+			if ('ext' in video) {
+				visibleText += ' ' + video['ext'];
+			}
+			if ('format_note' in video) {
+				visibleText += ' ' + video['format_note'];
+			}
+			if ('abr' in video) {
+				visibleText += ' ' + video['abr'] + 'kbps';
+			}
+			if ('flags' in video) {
+				for (var flagIndex in video['flags']) {
+					visibleText += ' ' + video['flags'][flagIndex];
+				}
+			}
+			YTDElement += 
+			'<li>' +
+				'<a href="'+ url + '" type="button" class="yt-ui-menu-item has-icon yt-uix-menu-close-on-select" target="_blank">' +
+					'<span class="yt-ui-menu-item-label">' + visibleText + '</span>' +
+				'</a>' +
+			'</li>';
 		}
-		YTDElement += 
-		'<li>' +
-			'<a href="'+ url + '" type="button" class="yt-ui-menu-item has-icon yt-uix-menu-close-on-select" target="_blank">' +
-				'<span class="yt-ui-menu-item-label">' + visibleText + '</span>' +
-			'</a>' +
-		'</li>';
+		if (count === 1){
+			YTDElement += '</ul></div></div>';
+		}
+		count += 1;
 	}
 	//contain and inject the newly created download element into the page
 	YTDElement += '</ul></div></div>';
@@ -204,7 +221,45 @@ function getYouTubeVideos() {
 			videos.push(video);
 		}
 	}
-	return videos;
+	//If we have adaptive formats available then let's utilize them, otherwise just return videos.
+	if (!ytplayer || !ytplayer.config || !ytplayer.config.args || !ytplayer.config.args.adaptive_fmts) {
+		return [videos];
+	}
+	var regularAndAdaptiveVideos = [videos];
+	YTPlayerVideos = ytplayer.config.args.adaptive_fmts.split(',');
+	videos = [];
+	//parse out the information for each video and put it into the videos variable
+	for (var index in YTPlayerVideos) {
+		//split up the elements that make up the info for the video element
+		var currentVideo = YTPlayerVideos[index].split('&');
+		//find the itag, url, and sig elements where applicable
+		var video = {}; var itag = 0; var url = ''; var signature = '';
+		for (var elem in currentVideo) {
+			if (currentVideo[elem].indexOf('itag=') === 0) {
+				itag = currentVideo[elem].split('=')[1];
+			} else if (currentVideo[elem].indexOf('url=') === 0) {
+				url = unescape(currentVideo[elem].split('=')[1]);
+			} else if (currentVideo[elem].indexOf('s=') === 0) {
+				signature = unescape(currentVideo[elem].split('=')[1]);
+			}
+		}
+		//if we found them then let's fetch the relevant information
+		//and add it to the videos list
+		if (url !== '' && itag !== 0) {
+			video = YTVideoFormats[itag];
+			video['url'] = url;
+			//if the url contains the signature then we're good
+			if (url.indexOf('signature') < 1 && signature !== '') {
+				//otherwise we need to decrypt the signature from the signature element we found
+				video['url'] += '&signature=' + decrypt_signature(signature);
+			}
+			//add title to url so that the file downloads with a proper title
+			video['url'] += '&title=' + videoTitle;
+			videos.push(video);
+		}
+	}
+	regularAndAdaptiveVideos.push(videos);
+	return regularAndAdaptiveVideos;
 }
 
 //YouTube likes to change this; pulled this straight from their source.
