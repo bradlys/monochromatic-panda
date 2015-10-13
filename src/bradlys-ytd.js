@@ -266,7 +266,7 @@ function getYouTubeVideos() {
 //Decrypts a signature when necessary. Isn't needed sometimes. This is probably going to break /a lot/.
 //Last updated on October 6th, 2015
 function decrypt_signature(signature) {
-	var es={FU:function(a,b){var c=a[0];a[0]=a[b%a.length];a[b]=c},T6:function(a){a.reverse()},bD:function(a,b){a.splice(0,b)}};
-	function fs(a){a=a.split("");es.T6(a,53);es.bD(a,3);es.T6(a,17);es.bD(a,2);es.FU(a,62);es.FU(a,25);es.bD(a,1);es.T6(a,60);return a.join("")};
+	var es={uu:function(a,b){a.splice(0,b)},y4:function(a){a.reverse()},oJ:function(a,b){var c=a[0];a[0]=a[b%a.length];a[b]=c}};
+	function fs(a){a=a.split("");es.y4(a,80);es.oJ(a,37);es.y4(a,27);es.oJ(a,19);es.y4(a,60);es.uu(a,3);es.y4(a,53);es.oJ(a,5);return a.join("")};
 	return fs(signature);
 }
