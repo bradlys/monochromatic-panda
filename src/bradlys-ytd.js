@@ -9,7 +9,6 @@ function createYouTubeDownloader() {
 	}
 	//if the element already exists then we don't need this program to run anymore
 	if (document.getElementById('bradlys-youtube-downloader') !== null) {
-		clearInterval(timerID);
 		return null;
 	}
 	//ytplayer needs to be fully initialized for us to do anything
@@ -22,7 +21,6 @@ function createYouTubeDownloader() {
 	var regularAndAdaptiveVideos = getYouTubeVideos();
 	//if no videos are returned then we don't need to create the youtube downloader element
 	if (regularAndAdaptiveVideos === []) {
-		clearInterval(timerID);
 		return null;
 	}
 	//Base YTDElement HTML
@@ -266,7 +264,7 @@ function getYouTubeVideos() {
 //Decrypts a signature when necessary. Isn't needed sometimes. This is probably going to break /a lot/.
 //Last updated on October 6th, 2015
 function decrypt_signature(signature) {
-	var es={uu:function(a,b){a.splice(0,b)},y4:function(a){a.reverse()},oJ:function(a,b){var c=a[0];a[0]=a[b%a.length];a[b]=c}};
-	function fs(a){a=a.split("");es.y4(a,80);es.oJ(a,37);es.y4(a,27);es.oJ(a,19);es.y4(a,60);es.uu(a,3);es.y4(a,53);es.oJ(a,5);return a.join("")};
+	var es={mu:function(a,b){a.splice(0,b)},cY:function(a){a.reverse()},UH:function(a,b){var c=a[0];a[0]=a[b%a.length];a[b]=c}};
+	function fs(a){a=a.split("");es.mu(a,2);es.cY(a,15);es.mu(a,3);es.UH(a,54);es.UH(a,60);es.UH(a,55);es.UH(a,65);return a.join("")};
 	return fs(signature);
 }
