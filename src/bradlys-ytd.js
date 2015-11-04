@@ -1,5 +1,6 @@
+'use strict';
 //Every 500ms, see if we can create the youtube downloader element
-var timerID = setInterval(function(){createYouTubeDownloader();}, 500);
+setInterval(function(){createYouTubeDownloader();}, 500);
 
 function createYouTubeDownloader() {
 	var YTDHolderElement = document.getElementById('watch8-secondary-actions');
@@ -211,6 +212,9 @@ function getYouTubeVideos() {
 			video['url'] = url;
 			//if the url contains the signature then we're good
 			if (url.indexOf('signature') < 1 && signature !== '') {
+                if(typeof decrypt_signature !== 'undefined' && !decrypt_signature){
+                    return [];
+                }
 				//otherwise we need to decrypt the signature from the signature element we found
 				video['url'] += '&signature=' + decrypt_signature(signature);
 			}
@@ -248,6 +252,9 @@ function getYouTubeVideos() {
 			video['url'] = url;
 			//if the url contains the signature then we're good
 			if (url.indexOf('signature') < 1 && signature !== '') {
+                if(typeof decrypt_signature !== 'undefined' && !decrypt_signature){
+                    return [];
+                }
 				//otherwise we need to decrypt the signature from the signature element we found
 				video['url'] += '&signature=' + decrypt_signature(signature);
 			}
@@ -258,13 +265,4 @@ function getYouTubeVideos() {
 	}
 	regularAndAdaptiveVideos.push(videos);
 	return regularAndAdaptiveVideos;
-}
-
-//YouTube likes to change this; pulled this straight from their source.
-//Decrypts a signature when necessary. Isn't needed sometimes. This is probably going to break /a lot/.
-//Last updated on October 29th, 2015
-function decrypt_signature(signature) {
-	var gs={fV:function(a,b){a.splice(0,b)},Kh:function(a,b){var c=a[0];a[0]=a[b%a.length];a[b]=c},qs:function(a){a.reverse()}};
-	function hs(a){a=a.split("");gs.fV(a,1);gs.qs(a,21);gs.fV(a,1);gs.Kh(a,56);gs.Kh(a,46);gs.fV(a,2);gs.qs(a,36);return a.join("")};
-	return hs(signature);
 }
