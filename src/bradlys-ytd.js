@@ -34,9 +34,11 @@ function createYouTubeDownloader() {
 			'<ul tabindex="0" class="yt-uix-kbd-nav yt-uix-kbd-nav-list">';
 	//For each video, create a corresponding list object and add it to the YTD Element
 	var count = 0;
+    var needsNewTab = false;
 	for (var raavi in regularAndAdaptiveVideos){
 		var videos = regularAndAdaptiveVideos[raavi];
 		if (count === 1){
+            needsNewTab = true;
 			YTDElement += 
 			'<div class="yt-uix-menu">' +
 				'<button class="yt-uix-button yt-uix-button-size-default yt-uix-button-opacity yt-uix-button-has-icon no-icon-markup pause-resume-autoplay yt-uix-menu-trigger yt-uix-tooltip" type="button" onclick=";return false;" aria-pressed="false" role="button" title="Alternative Formats (experimental)" aria-haspopup="true" data-tooltip-text="Alternative Formats (experimental)" aria-labelledby="yt-uix-tooltip44-arialabel" aria-controls="aria-menu-id-999">' +
@@ -77,7 +79,7 @@ function createYouTubeDownloader() {
 			}
 			YTDElement += 
 			'<li>' +
-				'<a href="'+ url + '" type="button" class="yt-ui-menu-item has-icon yt-uix-menu-close-on-select" target="_blank">' +
+				'<a href="'+ url + '" type="button" class="yt-ui-menu-item has-icon yt-uix-menu-close-on-select"'+(needsNewTab ? ' target=_blank' : '') +'>' +
 					'<span class="yt-ui-menu-item-label">' + visibleText + '</span>' +
 				'</a>' +
 			'</li>';
