@@ -181,7 +181,7 @@ function getYouTubeVideos() {
 		'249': {'ext': 'webm', 'vcodec': 'none', 'format_note': 'DASH audio', 'acodec': 'opus', 'abr': 50, 'preference': -50},
 		'250': {'ext': 'webm', 'vcodec': 'none', 'format_note': 'DASH audio', 'acodec': 'opus', 'abr': 70, 'preference': -50},
 		'251': {'ext': 'webm', 'vcodec': 'none', 'format_note': 'DASH audio', 'acodec': 'opus', 'abr': 160, 'preference': -50}
-	}
+	};
 	//grab the videos out of the ytplayer variable
 	var YTPlayerVideos = ytplayer.config.args.url_encoded_fmt_stream_map.split(',');
 	var videos = [];
@@ -214,11 +214,16 @@ function getYouTubeVideos() {
 			video['url'] = url;
 			//if the url contains the signature then we're good
 			if (url.indexOf('signature') < 1 && signature !== '') {
-                if(typeof decrypt_signature !== 'undefined' && !decrypt_signature){
-                    return [];
+                try {
+                    if (typeof decrypt_signature !== 'undefined' && !decrypt_signature) {
+                        return [];
+                    }
+                    //otherwise we need to decrypt the signature from the signature element we found
+                    video['url'] += '&signature=' + decrypt_signature(signature);
+                } catch (err) {
+                    console.log("Issue with decrypting signature for Bradly's YouTube Downloader.");
+                    continue;
                 }
-				//otherwise we need to decrypt the signature from the signature element we found
-				video['url'] += '&signature=' + decrypt_signature(signature);
 			}
 			//add title to url so that the file downloads with a proper title
 			video['url'] += '&title=' + videoTitle;
@@ -254,11 +259,16 @@ function getYouTubeVideos() {
 			video['url'] = url;
 			//if the url contains the signature then we're good
 			if (url.indexOf('signature') < 1 && signature !== '') {
-                if(typeof decrypt_signature !== 'undefined' && !decrypt_signature){
-                    return [];
+                try {
+                    if (typeof decrypt_signature !== 'undefined' && !decrypt_signature) {
+                        return [];
+                    }
+                    //otherwise we need to decrypt the signature from the signature element we found
+                    video['url'] += '&signature=' + decrypt_signature(signature);
+                } catch (err) {
+                    console.log("Issue with decrypting signature for Bradly's YouTube Downloader.");
+                    continue;
                 }
-				//otherwise we need to decrypt the signature from the signature element we found
-				video['url'] += '&signature=' + decrypt_signature(signature);
 			}
 			//add title to url so that the file downloads with a proper title
 			video['url'] += '&title=' + videoTitle;
