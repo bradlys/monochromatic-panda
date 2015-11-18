@@ -188,7 +188,7 @@ function getYouTubeVideos() {
 	//get the video title if it exists
 	var videoTitle = document.getElementById('watch-headline-title');
 	if (videoTitle !== null) {
-		videoTitle = escape(videoTitle.children[0].innerText);
+		videoTitle = encodeURIComponent(videoTitle.children[0].innerText);
 	} else {
 		videoTitle = 'YouTube Video';
 	}
@@ -202,9 +202,9 @@ function getYouTubeVideos() {
 			if (currentVideo[elem].indexOf('itag=') === 0) {
 				itag = currentVideo[elem].split('=')[1];
 			} else if (currentVideo[elem].indexOf('url=') === 0) {
-				url = unescape(currentVideo[elem].split('=')[1]);
+				url = decodeURIComponent(currentVideo[elem].split('=')[1]);
 			} else if (currentVideo[elem].indexOf('s=') === 0) {
-				signature = unescape(currentVideo[elem].split('=')[1]);
+				signature = decodeURIComponent(currentVideo[elem].split('=')[1]);
 			}
 		}
 		//if we found them then let's fetch the relevant information
@@ -247,9 +247,9 @@ function getYouTubeVideos() {
 			if (currentVideo[elem].indexOf('itag=') === 0) {
 				itag = currentVideo[elem].split('=')[1];
 			} else if (currentVideo[elem].indexOf('url=') === 0) {
-				url = unescape(currentVideo[elem].split('=')[1]);
+				url = decodeURIComponent(currentVideo[elem].split('=')[1]);
 			} else if (currentVideo[elem].indexOf('s=') === 0) {
-				signature = unescape(currentVideo[elem].split('=')[1]);
+				signature = decodeURIComponent(currentVideo[elem].split('=')[1]);
 			}
 		}
 		//if we found them then let's fetch the relevant information
