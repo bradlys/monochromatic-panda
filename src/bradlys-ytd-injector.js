@@ -42,9 +42,10 @@ function getDecryptSignature(){
             return '';
         }
         mainExecutionFunctionName = mainExecutionFunctionName[1];
-        var mainFunction = script.match(new RegExp("(function " + mainExecutionFunctionName.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&") + "\\(([\\w$]+)\\){[^}]*});"));
+        var regexClearMainExecutionFunctionName = mainExecutionFunctionName.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+        var mainFunction = script.match(new RegExp("(function " + regexClearMainExecutionFunctionName + "\\(([\\w$]+)\\){[^}]*});"));
         if(!mainFunction) {
-            mainFunction = script.match(new RegExp("(var " + mainExecutionFunctionName.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&") + "\\=function\\(([\\w$]+)\\){[^}]*});"));
+            mainFunction = script.match(new RegExp("(var " + regexClearMainExecutionFunctionName + "\\=function\\(([\\w$]+)\\){[^}]*});"));
             if(!mainFunction) {
                 return '';
             }
@@ -52,14 +53,19 @@ function getDecryptSignature(){
         var notNeedle = mainFunction[2];
         mainFunction = mainFunction[1];
         var subFunctions = mainFunction.match(new RegExp("[\\w$]+\\.[\\w$]+\\(" + notNeedle.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&") + "[^)]*\\)", 'g'));
+        if(!subFunctions){
+            return '';
+        }
         var subFunctionName = subFunctions[0].match(new RegExp('(\\w+)\\.', 'g'))[0].replace('.', '');
-        var subFunction = script.match(new RegExp("(var " + subFunctionName.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&") + "\\={[^}]*}).*}};"))[0];
+        var regexClearSubFunctionName = subFunctionName.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+        var subFunction = script.match(new RegExp("(var " + regexClearSubFunctionName + "\\={[^}]*})[\\S\\s]*?(?=}};)}};"));
         if(!subFunction){
-            subFunction = script.match(new RegExp("(var " + subFunctionName.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&") + "\\=function\\(([\\w$]+)\\){[^}]*});"));
+            subFunction = script.match(new RegExp("(var " + regexClearSubFunctionName + "\\=function\\(([\\w$]+)\\){[^}]*});"));
             if(!subFunction){
                 return '';
             }
         }
+        subFunction = subFunction[0];
         var decryptionScheme = 'decrypt_signature = function (sig) { ' + subFunction + ' ' + mainFunction + '; return ' + mainExecutionFunctionName + '(sig);};';
         var scriptElement = document.createElement('script');
         scriptElement.innerText = decryptionScheme;
