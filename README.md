@@ -1,14 +1,27 @@
-# monochromatic-panda
+# Bradly's YouTube Downloader
 Google Chrome Extension for Downloading YouTube Videos
 
-### Intention  
-The intention of this google chrome extension is to give accessibility to easily being able to download YouTube videos straight from the page of the video. A dropdown is added in the secondary actions row (next to share and report actions) where one can click on links to download the video they're watching in various formats that YouTube provides (but hides from your eyes; that's what this extension reveals).  
+## Introduction
 
-What is convenient about this is that you no longer have to go to another website to get this action done. You can get it done where it should be anyway!  
+Download YouTube videos without pain. Inserts a dropdown button with links to directly download the current video from YouTube in multiple formats. Easily integrates with the UI and does not interfere or rely on third party resources.
 
-Feel free to modify this extension to your heart's content and let me know of any issues! I made this extension to solve the problem that I was running into. I was unsatisfied with the solutions that others had attempted. Hope this helps you!
+## Usage
 
-To use this extension: download the source, go to the chrome extensions settings page (chrome://extensions/), enable developer mode (it's in the extensions page on top right), and click unload packed extension. Navigate to where you downloaded the source and load it up! Good luck!
+Go to a video on YouTube, click the Download button, and click on a format that you desire. The download will begin and come directly from YouTube's servers.
 
-#Now Available on Chrome Web Store
-[Bradly's YouTube Downloader](https://chrome.google.com/webstore/detail/bradlys-youtube-downloade/iegohpghbappmilohemkdpknmbcpbldb?hl=en-US&gl=US)
+## Motivation
+
+The motivation behind this extension was to allow for users to easily and safely download YouTube videos. There were already extensions and websites available that allowed for the downloading of YouTube videos but they came at a great cost in convenience or safety. None of them did it without taking your information, inserting advertisements into the page, or trying to insert malware into your computer. This is where Bradly's YouTube Downloader comes in and saves the day!
+
+## Installation
+
+One can install it directly from the [Google Chrome Store](https://chrome.google.com/webstore/detail/bradlys-youtube-downloade/iegohpghbappmilohemkdpknmbcpbldb), or if unavailable on the Google Chrome Store or one wants to tinker. Enable Developer Mode in Google Chrome and install the extension, [as described here](https://developer.chrome.com/extensions/getstarted#unpacked).
+
+## Contributing
+
+Contributions are always welcome!
+Please read the [contribution guidelines](contributing.md) first.
+
+## License
+
+[MIT (c) 2015 Bradly Schlenker](LICENSE)
