@@ -1,7 +1,7 @@
 {
 	"manifest_version": 2,
 	"name": "Bradly's YouTube Downloader",
-	"version": "0.0.2.5",
+	"version": "0.0.2.6",
 	"description": "Download YouTube videos without pain",
 	"homepage_url": "http://bradly.me/",
 	"permissions": ["http://*.youtube.com/*", "https://*.ytimg.com/*"],
