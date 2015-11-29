@@ -19,9 +19,16 @@ function createYouTubeDownloader() {
 		|| typeof ytplayer.config.args.url_encoded_fmt_stream_map === 'undefined' || ytplayer.config.args.url_encoded_fmt_stream_map === null) {
 		return null;
 	}
+    //get the video title if it exists
+    videoTitle = document.getElementById('watch-headline-title');
+    if (videoTitle !== null) {
+        videoTitle = encodeURIComponent(videoTitle.children[0].innerText);
+    } else {
+        videoTitle = 'YouTube Video';
+    }
 	var regularAndAdaptiveVideos = getYouTubeVideos();
 	//if no videos are returned then we don't need to create the youtube downloader element
-	if (regularAndAdaptiveVideos === []) {
+	if (regularAndAdaptiveVideos === [] || regularAndAdaptiveVideos === [[],[]] || !regularAndAdaptiveVideos) {
 		return null;
 	}
 	//Base YTDElement HTML
@@ -97,105 +104,104 @@ function createYouTubeDownloader() {
 //obtains all youtube videos from the ytplayer variable and parses them into an array
 function getYouTubeVideos() {
 	//Make sure that the ytplayer variable is there and properly initialized
-	if (!ytplayer || !ytplayer.config || !ytplayer.config.args || !ytplayer.config.args.url_encoded_fmt_stream_map) {
+	if (!(ytplayer && ytplayer.config && ytplayer.config.args && ytplayer.config.args.url_encoded_fmt_stream_map)) {
 		return null;
 	}
 	//grab the videos out of the ytplayer variable
 	var YTPlayerVideos = ytplayer.config.args.url_encoded_fmt_stream_map.split(',');
 	var videos = [];
-	//get the video title if it exists
-	var videoTitle = document.getElementById('watch-headline-title');
-	if (videoTitle !== null) {
-		videoTitle = encodeURIComponent(videoTitle.children[0].innerText);
-	} else {
-		videoTitle = 'YouTube Video';
-	}
+    var video, index;
 	//parse out the information for each video and put it into the videos variable
-	for (var index in YTPlayerVideos) {
-		//split up the elements that make up the info for the video element
-		var currentVideo = YTPlayerVideos[index].split('&');
-		//find the itag, url, and sig elements where applicable
-		var video = {}; var itag = 0; var url = ''; var signature = '';
-		for (var elem in currentVideo) {
-			if (currentVideo[elem].indexOf('itag=') === 0) {
-				itag = currentVideo[elem].split('=')[1];
-			} else if (currentVideo[elem].indexOf('url=') === 0) {
-				url = decodeURIComponent(currentVideo[elem].split('=')[1]);
-			} else if (currentVideo[elem].indexOf('s=') === 0) {
-				signature = decodeURIComponent(currentVideo[elem].split('=')[1]);
-			}
-		}
-		//if we found them then let's fetch the relevant information
-		//and add it to the videos list
-		if (url !== '' && itag !== 0) {
-			video = YTVideoFormats[itag];
-			video['url'] = url;
-			//if the url contains the signature then we're good
-			if (url.indexOf('signature') < 1 && signature !== '') {
-                try {
-                    if (typeof decrypt_signature !== 'undefined' && !decrypt_signature) {
-                        return [];
-                    }
-                    //otherwise we need to decrypt the signature from the signature element we found
-                    video['url'] += '&signature=' + decrypt_signature(signature);
-                } catch (err) {
-                    console.log("Issue with decrypting signature for Bradly's YouTube Downloader.");
-                    continue;
-                }
-			}
-			//add title to url so that the file downloads with a proper title
-			video['url'] += '&title=' + videoTitle;
-			videos.push(video);
-		}
+	for (index in YTPlayerVideos) {
+		video = parseVideoURIIntoObject(YTPlayerVideos[index]);
+        if (video) {
+            videos.push(video);
+        }
 	}
-	//If we have adaptive formats available then let's utilize them, otherwise just return videos.
-	if (!ytplayer || !ytplayer.config || !ytplayer.config.args || !ytplayer.config.args.adaptive_fmts) {
+    if(videos.length < 1){
+        return false;
+    }
+	//If we don't have adaptive formats available then just return videos we have so far.
+	if (!(ytplayer && ytplayer.config && ytplayer.config.args && ytplayer.config.args.adaptive_fmts)) {
 		return [videos];
 	}
 	var regularAndAdaptiveVideos = [videos];
 	YTPlayerVideos = ytplayer.config.args.adaptive_fmts.split(',');
 	videos = [];
 	//parse out the information for each video and put it into the videos variable
-	for (var index in YTPlayerVideos) {
-		//split up the elements that make up the info for the video element
-		var currentVideo = YTPlayerVideos[index].split('&');
-		//find the itag, url, and sig elements where applicable
-		var video = {}; var itag = 0; var url = ''; var signature = '';
-		for (var elem in currentVideo) {
-			if (currentVideo[elem].indexOf('itag=') === 0) {
-				itag = currentVideo[elem].split('=')[1];
-			} else if (currentVideo[elem].indexOf('url=') === 0) {
-				url = decodeURIComponent(currentVideo[elem].split('=')[1]);
-			} else if (currentVideo[elem].indexOf('s=') === 0) {
-				signature = decodeURIComponent(currentVideo[elem].split('=')[1]);
-			}
-		}
-		//if we found them then let's fetch the relevant information
-		//and add it to the videos list
-		if (url !== '' && itag !== 0) {
-			video = YTVideoFormats[itag];
-			video['url'] = url;
-			//if the url contains the signature then we're good
-			if (url.indexOf('signature') < 1 && signature !== '') {
-                try {
-                    if (typeof decrypt_signature !== 'undefined' && !decrypt_signature) {
-                        return [];
-                    }
-                    //otherwise we need to decrypt the signature from the signature element we found
-                    video['url'] += '&signature=' + decrypt_signature(signature);
-                } catch (err) {
-                    console.log("Issue with decrypting signature for Bradly's YouTube Downloader.");
-                    continue;
-                }
-			}
-			//add title to url so that the file downloads with a proper title
-			video['url'] += '&title=' + videoTitle;
-			videos.push(video);
-		}
+	for (index in YTPlayerVideos) {
+        video = parseVideoURIIntoObject(YTPlayerVideos[index]);
+        if (video) {
+            videos.push(video);
+        }
 	}
+    if(videos.length < 1){
+        return regularAndAdaptiveVideos[0];
+    }
 	regularAndAdaptiveVideos.push(videos);
 	return regularAndAdaptiveVideos;
 }
+
+/**
+ * Parses video URIs presented in the ytplayer variable into a digestable key/value object.
+ * Also preps the object for being consumed by the createYoutubeDownloader function.
+ *
+ * @param {string} URI
+ * @returns {object}
+ */
+function parseVideoURIIntoObject(URI) {
+    //split parameters from URI to obtain all information
+    var currentVideo = URI.split('&');
+    if(currentVideo.length < 3){
+        return false;
+    }
+    //find the itag, url, and signature elements where applicable
+    var video = {}; var itag = 0; var url = ''; var signature = '';
+    for (var elem in currentVideo) {
+        if (currentVideo[elem].indexOf('itag=') === 0) {
+            itag = currentVideo[elem].split('=')[1];
+        } else if (currentVideo[elem].indexOf('url=') === 0) {
+            url = decodeURIComponent(currentVideo[elem].split('=')[1]);
+        } else if (currentVideo[elem].indexOf('s=') === 0) {
+            signature = decodeURIComponent(currentVideo[elem].split('=')[1]);
+        }
+    }
+    //if we found them then let's fetch the relevant information
+    //and add it to the videos list
+    if (url !== '' && itag !== 0) {
+        video = YTVideoFormats[itag];
+        video['url'] = url;
+        //if the url doesn't contain the signature then we need to add it
+        if (url.indexOf('signature') < 1 && signature !== '') {
+            try {
+                if(!(ytplayer.config.assets.js in dispatchedEvents)){
+                    var event = new CustomEvent('BYTD_connectExtension',{
+                        detail: ytplayer.config.assets.js
+                    });
+                    document.dispatchEvent(event);
+                    dispatchedEvents[ytplayer.config.assets.js] = true;
+                }
+                //and if we have to add it then we need to decrypt it too
+                //This is the single biggest source of the entire thing breaking.
+                if (typeof decrypt_signature === 'undefined' || !decrypt_signature) {
+                    return false;
+                }
+                video['url'] += '&signature=' + decrypt_signature(signature);
+            } catch (err) {
+                console.log("Issue with decrypting signature for Bradly's YouTube Downloader.");
+                return false;
+            }
+        }
+        //add title to url so that the file downloads with a proper title
+        video['url'] += '&title=' + videoTitle;
+    }
+    return video;
+}
+
+var videoTitle = 'YouTube Video';
+
+//URLs we have dispatched events for, we don't want to duplicate event calls too often.
+var dispatchedEvents = {};
 
 //video formats information taken from youtube-dl project
 //each number corresponds to a unique type of video format

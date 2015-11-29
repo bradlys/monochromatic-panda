@@ -1,7 +1,6 @@
 function parseDecryptionFunction(url) {
-    var functionString = '';
     if (!url) {
-        return functionString;
+        return false;
     }
     var request = new XMLHttpRequest();
     request.onreadystatechange = function() {
@@ -11,30 +10,31 @@ function parseDecryptionFunction(url) {
     };
     request.open("GET", url);
     request.send();
-    return '';
+    return true;
 }
 
 function parseScript(url, script){
     if(!script || !url){
-        return '';
+        return false;
     }
     var mainExecutionFunctionName = script.match(/\.set\("signature",(.+)\(/);
     if(!mainExecutionFunctionName){
-        return '';
+        return false;
     }
     mainExecutionFunctionName = mainExecutionFunctionName[1];
     var mainFunction = parseMethodFromScript(mainExecutionFunctionName, script);
     if(!mainFunction){
-        return '';
+        return false;
     }
     var subFunction = parseSubFunctionFromMethodAndScript(mainFunction, mainExecutionFunctionName, script);
     if(!subFunction){
-        return '';
+        return false;
     }
     var decryptionScheme = 'decrypt_signature = function (sig) { ' +
                                 subFunction + ' ' +
                                 mainFunction +
                                 ' return ' + mainExecutionFunctionName + '(sig);};';
+    decrypted_signatures[url] = decryptionScheme;
     var scriptElement = document.createElement('script');
     scriptElement.innerText = decryptionScheme;
     scriptElement.onload = function() { this.parentNode.removeChild(this);};
@@ -121,29 +121,49 @@ function regexEscapeString(string){
     return string;
 }
 
-function getDecryptSignature(){
-    var url = '';
+function getDecryptSignature(url){
+    if(!url || url.length < 1){
+        url = '';
+        var scripts = document.scripts;
+    }
     var regularPlayer = false;
     var i;
-    for(i in document.scripts){
-        if(document.scripts[i].src && document.scripts[i].src.indexOf('html5player') !== -1){
-            url = document.scripts[i].src;
-            break;
+    if(url === '') {
+        for (i in scripts) {
+            if (scripts[i].src && scripts[i].src.indexOf('html5player') !== -1) {
+                url = scripts[i].src;
+                break;
+            }
         }
     }
     if(url === ''){
-        for(i in document.scripts){
-            if(document.scripts[i].src && document.scripts[i].src.indexOf('player') !== -1){
-                url = document.scripts[i].src;
+        for(i in scripts){
+            if(scripts[i].src && scripts[i].src.indexOf('player') !== -1){
+                url = scripts[i].src;
                 regularPlayer = true;
                 break;
             }
         }
     }
+    if(url === ''){
+        console.log("Couldn't parse script URL for Bradly's YouTube Downloader.");
+        return false;
+    }
     parseDecryptionFunction(url);
 }
 
 getDecryptSignature();
+
+var decrypted_signatures = {};
+
+/**
+ * Add event listener to DOM to know when the injected script needs the decryption scheme.
+ */
+document.addEventListener('BYTD_connectExtension', function(e) {
+    if(e.detail){
+        getDecryptSignature(e.detail);
+    }
+}, false);
 
 var s = document.createElement('script');
 s.src = chrome.extension.getURL('bradlys-ytd.js');
