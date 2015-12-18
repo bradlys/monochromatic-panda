@@ -17,7 +17,7 @@ function parseScript(url, script){
     if(!script || !url){
         return false;
     }
-    var mainExecutionFunctionName = script.match(/\.set\("signature",(.+)\(/);
+    var mainExecutionFunctionName = script.match(/\.set\("signature",([^\(]*)\(/);
     if(!mainExecutionFunctionName){
         return false;
     }
@@ -29,6 +29,12 @@ function parseScript(url, script){
     var subFunction = parseSubFunctionFromMethodAndScript(mainFunction, mainExecutionFunctionName, script);
     if(!subFunction){
         return false;
+    }
+    if(mainFunction[mainFunction.length - 1] !== ';'){
+        mainFunction += ';';
+    }
+    if(subFunction[subFunction.length - 1] !== ';'){
+        subFunction += ';';
     }
     var decryptionScheme = 'decrypt_signature = function (sig) { ' +
                                 subFunction + ' ' +
@@ -58,6 +64,9 @@ function parseMethodFromScript(methodName, haystack) {
         methodMatch = haystack.match(new RegExp("(function " + methodName + "\\([\\w$]+\\){[^}]*};)", 'm'));
     }
     if(!methodMatch) {
+        methodMatch = haystack.match(new RegExp("(" + methodName + "=function\\([\\w$]+\\){[^}]*})", 'm'));
+    }
+    if(!methodMatch) {
         return false;
     }
     return methodMatch[1];
@@ -75,6 +84,9 @@ function parseMethodParameterFromScript(methodName, haystack) {
     var methodMatch = haystack.match(new RegExp("function " + methodName + "\\(([\\w$]+)\\){[^}]*};", 'm'));
     if(!methodMatch) {
         methodMatch = haystack.match(new RegExp("var " + methodName + "=function\\(([\\w$]+)\\){[^}]*};", 'm'));
+    }
+    if(!methodMatch) {
+        methodMatch = haystack.match(new RegExp(methodName + "=function\\(([\\w$]+)\\){[^}]*}", 'm'));
     }
     if(!methodMatch) {
         return false;
