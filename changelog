@@ -1,0 +1,21 @@
+
+UPDATE 0.0.2.4:
+Updated URL encoding methodology. Filenames should be saved properly rather than with a bunch of %u0402's and so forth. Old method didn't work well with non-ASCII characters.
+
+UPDATE 0.0.2.1:
+No new tab will appear for regular video downloads. New tabs will appear for alternative/streaming formats still.
+
+UPDATE 0.0.2.0:
+Changed method of decrypting youtube signatures! Hopefully I don't have to do updates every few days for this extension anymore! Let me know if this ends up failing you. I'll rollback to previous strategy if it doesn't.
+
+UPDATE 0.0.0.8:
+Resolved issue with download button not appearing when clicking on related videos and when using playlists.
+
+UPDATE 0.0.0.4, 0.0.0.5, 0.0.0.6, 0.0.0.7, 0.0.0.8, 0.0.0.9, 0.0.1.0, 0.0.1.1, 0.0.2.2, 0.0.2.3, 0.0.2.5, 0.0.2.6:
+Updated signature decrypting algorithm.
+
+UPDATE 0.0.0.3:
+Added alternative video formats. These are mostly streaming audio only or streaming video only formats and, personally, I wouldn't bother with them unless you have a very specific purpose. Click the "Alternative Formats (experimental) -->" link to see them. You'll have to figure out a way to play them but you can. (Open VLC, use network streaming, and copy+paste the link in.)
+
+UPDATE 0.0.0.2:
+Updated algorithm for figuring out correct signatures. YouTube will update and change this often, thus breaking the extension for certain videos.

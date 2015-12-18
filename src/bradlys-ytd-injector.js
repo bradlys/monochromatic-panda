@@ -1,5 +1,5 @@
 function parseDecryptionFunction(url) {
-    if (!url) {
+    if (!url || url.length < 1) {
         return false;
     }
     var request = new XMLHttpRequest();
@@ -14,10 +14,10 @@ function parseDecryptionFunction(url) {
 }
 
 function parseScript(url, script){
-    if(!script || !url){
+    if(!script || script.length < 1 || !url || url.length < 1){
         return false;
     }
-    var mainExecutionFunctionName = script.match(/\.set\("signature",(.+)\(/);
+    var mainExecutionFunctionName = script.match(/\.set\("signature",(.+\))\(/);
     if(!mainExecutionFunctionName){
         return false;
     }
@@ -128,7 +128,7 @@ function getDecryptSignature(url){
     }
     var regularPlayer = false;
     var i;
-    if(url === '') {
+    if(!url || url.length < 1) {
         for (i in scripts) {
             if (scripts[i].src && scripts[i].src.indexOf('html5player') !== -1) {
                 url = scripts[i].src;
@@ -136,7 +136,7 @@ function getDecryptSignature(url){
             }
         }
     }
-    if(url === ''){
+    if(!url || url.length < 1){
         for(i in scripts){
             if(scripts[i].src && scripts[i].src.indexOf('player') !== -1){
                 url = scripts[i].src;
@@ -145,14 +145,12 @@ function getDecryptSignature(url){
             }
         }
     }
-    if(url === ''){
+    if(!url || url.length < 1){
         console.log("Couldn't parse script URL for Bradly's YouTube Downloader.");
         return false;
     }
     parseDecryptionFunction(url);
 }
-
-getDecryptSignature();
 
 var decrypted_signatures = {};
 
