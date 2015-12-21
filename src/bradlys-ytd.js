@@ -9,8 +9,25 @@ setInterval(function(){
 }, 500);
 
 //logging all errors that occur within the program
-var BYTDERRORS = [];
+var BYTDERRORS = {
+    errors: [],
+    addError: function(err){
+        this.errors.push(err);
+        BYTDERRORS.createErrorButton();
+    },
+    createErrorButton: function(){
+        var button = buttonTemplate.cloneNode(true);
+        var link = button.querySelector('#bradlys-youtube-downloader-links a').cloneNode(true);
+        button.querySelector('#bradlys-youtube-downloader-links').removeChild(button.querySelector('#bradlys-youtube-downloader-links a'));
+        //TOBEDONE
+    }
+};
 
+/**
+ * Business logic for creating the YouTube Downloader. Call this when you want to attempt to create the downloader.
+ *
+ * @returns {boolean}
+ */
 function createYouTubeDownloader() {
 	var YTDHolderElement = document.getElementById('watch8-secondary-actions');
 	//if we can't find the element to append the button to then we should stop the program and wait for it to load
@@ -26,7 +43,7 @@ function createYouTubeDownloader() {
 	}
     var existingElement = document.getElementById('bradlys-youtube-downloader');
     //if the element already exists and there's no errors then we don't need this program to run anymore
-    if (!existingElement || existingElement.getAttribute('class').indexOf('bytd-error') === -1) {
+    if (existingElement && existingElement.getAttribute('class').indexOf('bytd-error') === -1) {
         return false;
     }
     //get the video title if it exists
@@ -40,95 +57,118 @@ function createYouTubeDownloader() {
 	//if no videos are returned then we don't need to create the youtube downloader element
 	if (!videos || videos.length < 1) {
         //actually, we want to put up an error element instead
-        BYTDERRORS.push('Issue retrieving videos. Returned empty.');
+        BYTDERRORS.addError('Issue retrieving videos. Returned empty.');
 		return false;
 	}
     var YTDElement = videosToButton(videos);
     if (!YTDElement || YTDElement.length < 1) {
         //log something, maybe put up false downloader to report a problem
-        BYTDERRORS.push('Issue converting videos to element.');
+        BYTDERRORS.addError('Issue converting videos to element.');
         return false;
     }
-	YTDHolderElement.innerHTML += YTDElement;
+	YTDHolderElement.appendChild(YTDElement);
 }
 
+/**
+ * Converts parsed videos Array into HTML Element used for downloading the videos.
+ *
+ * @param videos {Array}
+ * @returns {Node}
+ */
 function videosToButton(videos) {
-    var button = buttonTemplate;
+    var button = buttonTemplate.cloneNode(true);
     //For each video, create a corresponding list object and add it to the YTD Element
-    var index, video;
+    var index, video, videoElement;
+    var linkTemplate = button.querySelector('#bradlys-youtube-downloader-links-1').cloneNode(true);
+    linkTemplate.removeAttribute('id');
+    button.querySelector('#bradlys-youtube-downloader-links')
+        .removeChild(button.querySelector('#bradlys-youtube-downloader-links-1'));
+    var firstLinksPointer = button.querySelector('#bradlys-youtube-downloader-links');
+    var nestedLinksPointer = button.querySelector('#bradlys-youtube-downloader-nested-links');
+    var firstLinksNestedItem = button.querySelector('#bradlys-youtube-downloader-links-last');
     for (index in videos){
         video = videos[index];
-        var url = video.url;
-        var visibleText = '';
+        var visibleText = [];
         if ('height' in video && 'width' in video) {
-            visibleText = video['width'] + 'x' + video['height'] + 'p';
+            visibleText.push(video['width'] + 'x' + video['height'] + 'p');
         } else if ('height' in video) {
-            visibleText = video['height'] + 'p';
+            visibleText.push(video['height'] + 'p');
         } else if ('width' in video) {
-            visibleText = video['width'] + 'x?';
-        } else {
-            visibleText = '?x?';
+            visibleText.push(video['width'] + 'x?');
+        } else if (!('audio' in video)) {
+            visibleText.push('?x?');
         }
         if ('fps' in video) {
-            visibleText += ' ' + video['fps'] + 'fps';
+            visibleText.push(video['fps'] + 'fps');
         }
         if ('ext' in video) {
-            visibleText += ' ' + video['ext'];
+            visibleText.push(video['ext']);
         }
         if ('format_note' in video) {
-            visibleText += ' ' + video['format_note'];
+            visibleText.push(video['format_note']);
         }
         if ('abr' in video) {
-            visibleText += ' ' + video['abr'] + 'kbps';
+            visibleText.push(video['abr'] + 'kbps');
         }
         if ('flags' in video) {
             for (var flagIndex in video['flags']) {
-                visibleText += ' ' + video['flags'][flagIndex];
+                visibleText.push(video['flags'][flagIndex]);
             }
+        }
+        if ('video' in video && !('audio' in video)) {
+            visibleText.push('VO');
+        } else if (!('video' in video) && 'audio' in video) {
+            visibleText.push('AO');
+        }
+        visibleText = visibleText.join(' ');
+        videoElement = linkTemplate.cloneNode(true);
+        videoElement.getElementsByTagName('span')[0].innerText = visibleText;
+        videoElement.getElementsByTagName('a')[0].setAttribute('href', video.url);
+        if ('video' in video && 'audio' in video) {
+            firstLinksPointer.insertBefore(videoElement, firstLinksNestedItem);
+        } else {
+            videoElement.getElementsByTagName('a')[0].setAttribute('target', '_blank');
+            nestedLinksPointer.appendChild(videoElement);
         }
     }
     return button;
 }
 
-//obtains all youtube videos from the ytplayer variable and parses them into an array
+/**
+ * Gets YouTube videos out of YouTube's state and returns an array of all videos with relevant information.
+ *
+ * @returns {Array|boolean}
+ */
 function getYouTubeVideos() {
 	//Make sure that the ytplayer variable is there and properly initialized
-	if (!(ytplayer && ytplayer.config && ytplayer.config.args && ytplayer.config.args.url_encoded_fmt_stream_map)) {
+	if (!(ytplayer && ytplayer.config && ytplayer.config.args)) {
 		return false;
 	}
 	//grab the videos out of the ytplayer variable
-	var YTPlayerVideos = ytplayer.config.args.url_encoded_fmt_stream_map.split(',');
-	var videos = [];
-    var video, index;
-	//parse out the information for each video and put it into the videos variable
-	for (index in YTPlayerVideos) {
-		video = parseVideoURIIntoObject(YTPlayerVideos[index]);
-        if (video) {
-            videos.push(video);
+    var videos = [];
+    var video, index, YTPlayerVideos;
+    if (ytplayer.config.args.url_encoded_fmt_stream_map) {
+        YTPlayerVideos = ytplayer.config.args.url_encoded_fmt_stream_map.split(',');
+        //parse out the information for each video and put it into the videos variable
+        for (index in YTPlayerVideos) {
+            video = parseVideoURIIntoObject(YTPlayerVideos[index]);
+            if (video) {
+                videos.push(video);
+            }
         }
-	}
-    if(videos.length < 1){
-        return false;
     }
 	//If we don't have adaptive formats available then just return videos we have so far.
-	if (!(ytplayer && ytplayer.config && ytplayer.config.args && ytplayer.config.args.adaptive_fmts)) {
-		return [videos];
-	}
-	var regularAndAdaptiveVideos = [videos];
-	YTPlayerVideos = ytplayer.config.args.adaptive_fmts.split(',');
-	videos = [];
-	//parse out the information for each video and put it into the videos variable
-	for (index in YTPlayerVideos) {
-        video = parseVideoURIIntoObject(YTPlayerVideos[index]);
-        if (video) {
-            videos.push(video);
+	if (ytplayer.config.args.adaptive_fmts) {
+        YTPlayerVideos = ytplayer.config.args.adaptive_fmts.split(',');
+        //parse out the information for each video and put it into the videos variable
+        for (index in YTPlayerVideos) {
+            video = parseVideoURIIntoObject(YTPlayerVideos[index]);
+            if (video) {
+                videos.push(video);
+            }
         }
 	}
-    if(videos.length < 1){
-        return regularAndAdaptiveVideos;
-    }
-	regularAndAdaptiveVideos.push(videos);
-	return regularAndAdaptiveVideos;
+	return videos.length > 0 ? videos : false;
 }
 
 /**
@@ -157,11 +197,13 @@ function parseVideoURIIntoObject(URI) {
     }
     //if we found them then let's fetch the relevant information
     //and add it to the videos list
-    if (url !== '' && itag !== 0) {
+    if (url.length > 0 && itag !== 0) {
+        //copy base itag information over
         video = YTVideoFormats[itag];
+        //add in the URL
         video['url'] = url;
-        //if the url doesn't contain the signature then we need to add it
-        if (url.indexOf('signature') < 1 && signature !== '') {
+        //if the url doesn't contain the signature then we need to add it to the URL
+        if (url.indexOf('signature') < 1 && signature.length > 0) {
             try {
                 if(!(ytplayer.config.assets.js in dispatchedEvents)){
                     var event = new CustomEvent('BYTD_connectExtension',{
@@ -183,42 +225,43 @@ function parseVideoURIIntoObject(URI) {
         }
         //add title to url so that the file downloads with a proper title
         video['url'] += '&title=' + videoTitle;
+    } else {
+        //if we didn't find the URL or itag then something is wrong.
+        console.log("Bradly's YouTube Downloader did not find an itag and/or URL for a video.");
+        BYTDERRORS.addError("URI Parsing Issue w/ URI: " + URI);
+        return false;
     }
     return video;
 }
 
 var videoTitle = 'YouTube Video';
 
-var buttonTemplate =
-    '<div class="yt-uix-menu" id="bradlys-youtube-downloader">' +
-        '<button class="yt-uix-button yt-uix-button-size-default yt-uix-button-opacity yt-uix-button-has-icon no-icon-markup pause-resume-autoplay yt-uix-menu-trigger yt-uix-tooltip" type="button" onclick="return false;" aria-pressed="false" role="button" title="Download" aria-haspopup="true" data-tooltip-text="Download" aria-labelledby="yt-uix-tooltip44-arialabel" aria-controls="aria-menu-id-99">' +
-            '<span class="yt-uix-button-content">Download</span>' +
-        '</button>' +
-        '<div class="yt-uix-menu-content yt-ui-menu-content yt-uix-kbd-nav yt-uix-menu-content-hidden" role="menu" aria-expanded="false" id="aria-menu-id-99" style="min-width: 69px;">' +
-            '<ul tabindex="0" class="yt-uix-kbd-nav yt-uix-kbd-nav-list">' +
-                '<li>' +
-                    '<a href="" type="button" class="yt-ui-menu-item has-icon yt-uix-menu-close-on-select">' +
-                        '<span class="yt-ui-menu-item-label"></span>' +
-                    '</a>' +
-                '</li>' +
-                '<li>' +
-                    '<div class="yt-uix-menu">' +
-                        '<button class="yt-uix-button yt-uix-button-size-default yt-uix-button-opacity yt-uix-button-has-icon no-icon-markup pause-resume-autoplay yt-uix-menu-trigger yt-uix-tooltip" type="button" onclick="return false;" aria-pressed="false" role="button" title="Alternative Formats (experimental)" aria-haspopup="true" data-tooltip-text="Alternative Formats (experimental)" aria-labelledby="yt-uix-tooltip44-arialabel" aria-controls="aria-menu-id-999">' +
-                            '<span class="yt-uix-button-content">Alternative Formats (experimental) --></span>' +
-                        '</button>' +
-                        '<div class="yt-uix-menu-content yt-ui-menu-content yt-uix-kbd-nav yt-uix-menu-content-hidden" role="menu" aria-expanded="false" id="aria-menu-id-999" style="min-width: 69px;">' +
-                            '<ul tabindex="0" class="yt-uix-kbd-nav yt-uix-kbd-nav-list">' +
-                                '<li>' +
-                                    '<a href="" type="button" class="yt-ui-menu-item has-icon yt-uix-menu-close-on-select">' +
-                                        '<span class="yt-ui-menu-item-label"></span>' +
-                                    '</a>' +
-                                '</li>' +
-                            '</ul>' +
-                        '</div>' +
+var buttonTemplate = document.createElement('div');
+buttonTemplate.id = "bradlys-youtube-downloader";
+buttonTemplate.className = 'yt-uix-menu';
+buttonTemplate.innerHTML =
+    '<button class="yt-uix-button yt-uix-button-size-default yt-uix-button-opacity yt-uix-button-has-icon no-icon-markup pause-resume-autoplay yt-uix-menu-trigger yt-uix-tooltip" type="button" onclick="return false;" aria-pressed="false" role="button" title="Download" aria-haspopup="true" data-tooltip-text="Download" aria-labelledby="yt-uix-tooltip44-arialabel" aria-controls="aria-menu-id-99">' +
+        '<span class="yt-uix-button-content">Download</span>' +
+    '</button>' +
+    '<div class="yt-uix-menu-content yt-ui-menu-content yt-uix-kbd-nav yt-uix-menu-content-hidden" role="menu" aria-expanded="false" id="aria-menu-id-99" style="min-width: 69px;">' +
+        '<ul tabindex="0" class="yt-uix-kbd-nav yt-uix-kbd-nav-list" id="bradlys-youtube-downloader-links">' +
+            '<li id="bradlys-youtube-downloader-links-1">' +
+                '<a href="" type="button" class="yt-ui-menu-item has-icon yt-uix-menu-close-on-select">' +
+                    '<span class="yt-ui-menu-item-label"></span>' +
+                '</a>' +
+            '</li>' +
+            '<li id="bradlys-youtube-downloader-links-last">' +
+                '<div class="yt-uix-menu">' +
+                    '<button class="yt-uix-button yt-uix-button-size-default yt-uix-button-opacity yt-uix-button-has-icon no-icon-markup pause-resume-autoplay yt-uix-menu-trigger yt-uix-tooltip" type="button" onclick="return false;" aria-pressed="false" role="button" title="Alternative Formats (experimental)" aria-haspopup="true" data-tooltip-text="Alternative Formats (experimental)" aria-labelledby="yt-uix-tooltip44-arialabel" aria-controls="aria-menu-id-999">' +
+                        '<span class="yt-uix-button-content">Alternative Formats (experimental) --></span>' +
+                    '</button>' +
+                    '<div class="yt-uix-menu-content yt-ui-menu-content yt-uix-kbd-nav yt-uix-menu-content-hidden" role="menu" aria-expanded="false" id="aria-menu-id-999" style="min-width: 69px;">' +
+                        '<ul tabindex="0" class="yt-uix-kbd-nav yt-uix-kbd-nav-list" id="bradlys-youtube-downloader-nested-links">' +
+                        '</ul>' +
                     '</div>' +
-                '</li>' +
-            '</ul>' +
-        '</div>' +
+                '</div>' +
+            '</li>' +
+        '</ul>' +
     '</div>';
 
 //URLs we have dispatched events for, we don't want to duplicate event calls too often.
