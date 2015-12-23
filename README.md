@@ -19,7 +19,7 @@ The motivation behind this extension was to allow for users to easily and safely
 
 One can install it directly from the [Google Chrome Store](https://chrome.google.com/webstore/detail/bradlys-youtube-downloade/iegohpghbappmilohemkdpknmbcpbldb), or if unavailable on the Google Chrome Store or one wants to tinker. Enable Developer Mode in Google Chrome and install the extension, [as described here](https://developer.chrome.com/extensions/getstarted#unpacked).
 
-A more detailed video is [available here](https://www.youtube.com/watch?v=wRBKYiumhQI) that details error reporting, installation, updating, and a bit of troubleshooting.
+A detailed video is [available here](https://www.youtube.com/watch?v=wRBKYiumhQI) that details error reporting, installation, updating, and a bit of troubleshooting.
 
 ## Contributing
 
