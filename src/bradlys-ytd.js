@@ -1,3 +1,5 @@
+/*global ytplayer, decrypt_signature */
+(function(){
 'use strict';
 //Every 500ms, see if we can create the youtube downloader element
 setInterval(function(){
@@ -35,10 +37,7 @@ function createYouTubeDownloader() {
 		return false;
 	}
 	//ytplayer needs to be fully initialized for us to do anything
-	if (typeof ytplayer === 'undefined' || ytplayer === null
-		|| typeof ytplayer.config === 'undefined' || ytplayer.config === null
-		|| typeof ytplayer.config.args === 'undefined' || ytplayer.config.args === null
-		|| typeof ytplayer.config.args.url_encoded_fmt_stream_map === 'undefined' || ytplayer.config.args.url_encoded_fmt_stream_map === null) {
+	if (typeof ytplayer === 'undefined' || typeof ytplayer.config === 'undefined' || typeof ytplayer.config.args === 'undefined' || typeof ytplayer.config.args.url_encoded_fmt_stream_map === 'undefined') {
 		return false;
 	}
     var existingElement = document.getElementById('bradlys-youtube-downloader');
@@ -72,13 +71,13 @@ function createYouTubeDownloader() {
 /**
  * Converts parsed videos Array into HTML Element used for downloading the videos.
  *
- * @param videos {Array}
+ * @param {Array} videos
  * @returns {Node}
  */
 function videosToButton(videos) {
     var button = buttonTemplate.cloneNode(true);
     //For each video, create a corresponding list object and add it to the YTD Element
-    var index, video, videoElement;
+    var index, video, videoElement, visibleText, flagIndex;
     var linkTemplate = button.querySelector('#bradlys-youtube-downloader-links-1').cloneNode(true);
     linkTemplate.removeAttribute('id');
     button.querySelector('#bradlys-youtube-downloader-links')
@@ -86,33 +85,33 @@ function videosToButton(videos) {
     var firstLinksPointer = button.querySelector('#bradlys-youtube-downloader-links');
     var nestedLinksPointer = button.querySelector('#bradlys-youtube-downloader-nested-links');
     var firstLinksNestedItem = button.querySelector('#bradlys-youtube-downloader-links-last');
-    for (index in videos){
+    for (index = 0; index < videos.length; index++) {
         video = videos[index];
-        var visibleText = [];
+        visibleText = [];
         if ('height' in video && 'width' in video) {
-            visibleText.push(video['width'] + 'x' + video['height'] + 'p');
+            visibleText.push(video.width + 'x' + video.height + 'p');
         } else if ('height' in video) {
-            visibleText.push(video['height'] + 'p');
+            visibleText.push(video.height + 'p');
         } else if ('width' in video) {
-            visibleText.push(video['width'] + 'x?');
+            visibleText.push(video.width + 'x?');
         } else if (!('audio' in video)) {
             visibleText.push('?x?');
         }
         if ('fps' in video) {
-            visibleText.push(video['fps'] + 'fps');
+            visibleText.push(video.fps + 'fps');
         }
         if ('ext' in video) {
-            visibleText.push(video['ext']);
+            visibleText.push(video.ext);
         }
         if ('format_note' in video) {
-            visibleText.push(video['format_note']);
+            visibleText.push(video.format_note);
         }
         if ('abr' in video) {
-            visibleText.push(video['abr'] + 'kbps');
+            visibleText.push(video.abr + 'kbps');
         }
         if ('flags' in video) {
-            for (var flagIndex in video['flags']) {
-                visibleText.push(video['flags'][flagIndex]);
+            for (flagIndex = 0; flagIndex < video.flags.length; flagIndex++) {
+                visibleText.push(video.flags[flagIndex]);
             }
         }
         if ('video' in video && !('audio' in video)) {
@@ -141,7 +140,7 @@ function videosToButton(videos) {
  */
 function getYouTubeVideos() {
 	//Make sure that the ytplayer variable is there and properly initialized
-	if (!(ytplayer && ytplayer.config && ytplayer.config.args)) {
+	if (!(typeof ytplayer !== 'undefined' && typeof ytplayer.config !== 'undefined' && typeof ytplayer.config.args !== 'undefined')) {
 		return false;
 	}
 	//grab the videos out of the ytplayer variable
@@ -150,7 +149,7 @@ function getYouTubeVideos() {
     if (ytplayer.config.args.url_encoded_fmt_stream_map) {
         YTPlayerVideos = ytplayer.config.args.url_encoded_fmt_stream_map.split(',');
         //parse out the information for each video and put it into the videos variable
-        for (index in YTPlayerVideos) {
+        for (index = 0; index < YTPlayerVideos.length; index++) {
             video = parseVideoURIIntoObject(YTPlayerVideos[index]);
             if (video) {
                 videos.push(video);
@@ -161,7 +160,7 @@ function getYouTubeVideos() {
 	if (ytplayer.config.args.adaptive_fmts) {
         YTPlayerVideos = ytplayer.config.args.adaptive_fmts.split(',');
         //parse out the information for each video and put it into the videos variable
-        for (index in YTPlayerVideos) {
+        for (index = 0; index < YTPlayerVideos.length; index++) {
             video = parseVideoURIIntoObject(YTPlayerVideos[index]);
             if (video) {
                 videos.push(video);
@@ -185,8 +184,8 @@ function parseVideoURIIntoObject(URI) {
         return false;
     }
     //find the itag, url, and signature elements where applicable
-    var video = {}; var itag = 0; var url = ''; var signature = '';
-    for (var elem in currentVideo) {
+    var video = {}; var itag = 0; var url = ''; var signature = ''; var elem;
+    for (elem = 0; elem < currentVideo.length; elem++) {
         if (currentVideo[elem].indexOf('itag=') === 0) {
             itag = currentVideo[elem].split('=')[1];
         } else if (currentVideo[elem].indexOf('url=') === 0) {
@@ -201,7 +200,7 @@ function parseVideoURIIntoObject(URI) {
         //copy base itag information over
         video = YTVideoFormats[itag];
         //add in the URL
-        video['url'] = url;
+        video.url = url;
         //if the url doesn't contain the signature then we need to add it to the URL
         if (url.indexOf('signature') < 1 && signature.length > 0) {
             try {
@@ -217,14 +216,14 @@ function parseVideoURIIntoObject(URI) {
                 if (typeof decrypt_signature === 'undefined' || !decrypt_signature) {
                     return false;
                 }
-                video['url'] += '&signature=' + decrypt_signature(signature);
+                video.url += '&signature=' + decrypt_signature(signature);
             } catch (err) {
                 console.log("Issue with decrypting signature for Bradly's YouTube Downloader.");
                 return false;
             }
         }
         //add title to url so that the file downloads with a proper title
-        video['url'] += '&title=' + videoTitle;
+        video.url += '&title=' + videoTitle;
     } else {
         //if we didn't find the URL or itag then something is wrong.
         console.log("Bradly's YouTube Downloader did not find an itag and/or URL for a video.");
@@ -349,3 +348,5 @@ var YTVideoFormats = {
     '250': {'ext': 'webm', 'vcodec': 'none', 'format_note': 'DASH audio', 'acodec': 'opus', 'abr': 70, 'preference': -50, 'audio': true},
     '251': {'ext': 'webm', 'vcodec': 'none', 'format_note': 'DASH audio', 'acodec': 'opus', 'abr': 160, 'preference': -50, 'audio': true}
 };
+})();
+
