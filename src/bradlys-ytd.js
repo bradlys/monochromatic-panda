@@ -1,29 +1,269 @@
 /*global ytplayer, decrypt_signature */
-(function(){
+//(function(){
 'use strict';
 //Every 500ms, see if we can create the youtube downloader element
 setInterval(function(){
     try {
         createYouTubeDownloader();
     } catch (e) {
-        BYTDERRORS.push(e);
+        BYTDERRORS.addError(e);
     }
 }, 500);
+
+const BUTTON_APPEND_SELECTOR = '#watch8-secondary-actions';
 
 //logging all errors that occur within the program
 var BYTDERRORS = {
     errors: [],
     addError: function(err){
         this.errors.push(err);
-        BYTDERRORS.createErrorButton();
-    },
-    createErrorButton: function(){
-        var button = buttonTemplate.cloneNode(true);
-        var link = button.querySelector('#bradlys-youtube-downloader-links a').cloneNode(true);
-        button.querySelector('#bradlys-youtube-downloader-links').removeChild(button.querySelector('#bradlys-youtube-downloader-links a'));
-        //TOBEDONE
+        addErrorToView(err);
     }
 };
+
+class Item {
+    constructor(text, parent) {
+        if (typeof text === 'string' ) {
+            if (text.length < 0) {
+                throw 'Length of 0 String provided for Text.';
+            }
+        } else {
+            throw 'Non-String type provided for Text.';
+        }
+        this._text = text;
+        let randomInt = intGen.next();
+        let selector = '#' + intGen;
+        while (document.querySelector(selector)) {
+            randomInt = intGen.next();
+            selector = '#' + intGen;
+        }
+        this._id = randomInt;
+        //this is where things get weird
+        if (parent === undefined || parent instanceof Menu) {
+            this._parent = parent;
+        } else {
+            throw 'Incorrect type provided for parent.';
+        }
+    }
+    getText() {
+        return this._text;
+    }
+    getId() {
+        return this._id;
+    }
+    getParent() {
+        return this._parent;
+    }
+    getHTML() {
+        let id = this.getId();
+        let text = this.getText();
+        let linkTemplate =
+            `<li id="${id}">
+                <span class="yt-ui-menu-item-label">${text}</span>
+            </li>`;
+        return linkTemplate;
+    }
+}
+
+class Link extends Item {
+    constructor(text, url, parent) {
+        super(text, parent);
+        if (typeof url === 'boolean') {
+            if (url !== false) {
+                throw 'True Boolean value provided for URL.';
+            }
+        } else if (typeof url === 'string') {
+            if (url.length < 0) {
+                throw 'Length of 0 String provided for URL.';
+            }
+            if (!validateURL(url)) {
+                throw 'Invalid url format provided for URL.';
+            }
+        } else {
+            throw 'Invalid type provided for URL.';
+        }
+        this._url = url;
+    }
+    getURL() {
+        return this._url;
+    }
+    getHTML() {
+        let id = this.getId();
+        let text = this.getText();
+        let url = this.getURL();
+        let linkTemplate =
+            `<li id="${id}">
+                <a href="${url}" type="button" class="yt-ui-menu-item has-icon yt-uix-menu-close-on-select">
+                    <span class="yt-ui-menu-item-label">${text}</span>
+                </a>
+            </li>`;
+        return linkTemplate;
+    }
+}
+
+class Menu extends Item {
+    constructor(text, parent) {
+        super(text, parent);
+        this._children = [];
+    }
+    getParent() {
+        return this._parent;
+    }
+    getChildren() {
+        return this._children;
+    }
+    addChild(item) {
+        if ((item instanceof Item) || (item instanceof Link)) {
+            if (!this.contains(item)) {
+                this._children.push(item);
+            }
+        } else {
+            throw 'Provided item is not an instance of Item or Link.';
+        }
+    }
+    contains(item) {
+        if ((item instanceof Item)) {
+            for (let child of this.getChildren()) {
+                if (item.getId() === child.getId()) {
+                    return true;
+                }
+                if (child instanceof Menu && child.contains(item)) {
+                    return true;
+                }
+            }
+            return false;
+        } else {
+            throw 'Provided item is not an instance of Item.';
+        }
+    }
+    getHTML() {
+        let text = this.getText();
+        let id = this.getId();
+        let items = '';
+        for (let child of this.getChildren()) {
+            items += child.getHTML();
+        }
+        let menuTemplate =
+            `<button class="yt-uix-button yt-uix-button-size-default yt-uix-button-opacity yt-uix-button-has-icon no-icon-markup pause-resume-autoplay yt-uix-menu-trigger yt-uix-tooltip" type="button" onclick="return false;" aria-pressed="false" role="button" title="${text}" aria-haspopup="true" data-tooltip-text="${text}" aria-controls="${id}">
+                <span class="yt-uix-button-content">${text}</span>
+            </button>
+            <div class="yt-uix-menu-content yt-ui-menu-content yt-uix-kbd-nav yt-uix-menu-content-hidden" role="menu" aria-expanded="false" id="${id}" style="min-width: 69px;">
+                <ul tabindex="0" class="yt-uix-kbd-nav yt-uix-kbd-nav-list">
+                ${items}
+                </ul>
+            </div>`;
+        return menuTemplate;
+    }
+}
+
+class UniqueNumberGenerator {
+    constructor() {
+        this._queue = new Queue();
+        this._allEver = {};
+    }
+    next() {
+        let next = this._queue.dequeue();
+        if (typeof next !== 'number') {
+            let ints = {};
+            for (let i = 0; i < 50; i++){
+                let randomInt = getRandomIntInclusive(1e+50, 1e+200);
+                if (randomInt in ints || randomInt in this._allEver) {
+                    i--;
+                } else {
+                    ints[randomInt] = true;
+                }
+            }
+            for (let key in ints) {
+                if (ints.hasOwnProperty(key)) {
+                    this._queue.enqueue(key);
+                    this._allEver[key] = false;
+                }
+            }
+            next = this._queue.dequeue();
+        }
+        this._allEver[next] = true;
+        return next;
+    }
+}
+
+class Queue {
+    constructor() {
+        this._queue = [];
+        this._front = 0;
+    }
+    getLength() {
+        return this._queue.length;
+    }
+    isEmpty() {
+        return this._queue.length === 0
+    }
+    enqueue(item) {
+        this._queue.push(item);
+    }
+    dequeue() {
+        if (this.isEmpty()) {
+            return undefined;
+        }
+        let item = this._queue[this._front];
+        let length = this.getLength();
+        if (length > 25 && (this._front * 2) > length) {
+            this._queue = this._queue.slice(this._front+1);
+            this._front = 0;
+        } else {
+            this._front++;
+        }
+        return item;
+    }
+    peek() {
+        return this.isEmpty() ? undefined : this._queue[this._front];
+    }
+}
+
+function getRandomIntInclusive(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function validateURL(textval) {
+    var urlregex = /^(https?|ftp):\/\/([a-zA-Z0-9.-]+(:[a-zA-Z0-9.&%$-]+)*@)*((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}|([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.(com|edu|gov|int|mil|net|org|biz|arpa|info|name|pro|aero|coop|museum|[a-zA-Z]{2}))(:[0-9]+)*(\/($|[a-zA-Z0-9.,?'\\+&%$#=~_-]+))*$/;
+    return urlregex.test(textval);
+}
+
+function addErrorToView(message) {
+
+}
+
+/**
+ * Adds the download button to the view.
+ *
+ * @param {Menu} menu
+ */
+function addDownloadButtonToView(menu) {
+    if (!(menu instanceof Menu)) {
+        throw 'Provided menu is not an instance of Menu.';
+    }
+    if (downloadButtonExist()) {
+        //update? Do nothing?
+    }
+    let html = menu.getHTML();
+    let element = document.createElement('p');
+    element.innerHTML = html;
+    for (let node of element.childNodes) {
+        document.querySelector(BUTTON_APPEND_SELECTOR).appendChild(node);
+    }
+}
+
+function downloadButtonExist() {
+    return document.querySelector(BUTTON_APPEND_SELECTOR) !== null;
+}
+
+/**
+ * Adds a link to the view. It will add the link to the download button.
+ *
+ * @param {Link} link - Link to be added to view.
+ */
+function addLinkToView(link) {
+
+}
 
 /**
  * Business logic for creating the YouTube Downloader. Call this when you want to attempt to create the downloader.
@@ -348,5 +588,6 @@ var YTVideoFormats = {
     '250': {'ext': 'webm', 'vcodec': 'none', 'format_note': 'DASH audio', 'acodec': 'opus', 'abr': 70, 'preference': -50, 'audio': true},
     '251': {'ext': 'webm', 'vcodec': 'none', 'format_note': 'DASH audio', 'acodec': 'opus', 'abr': 160, 'preference': -50, 'audio': true}
 };
-})();
 
+let intGen = new UniqueNumberGenerator();
+//})();
