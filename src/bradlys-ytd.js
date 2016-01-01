@@ -106,9 +106,6 @@ class Menu extends Item {
         super(text, parent);
         this._children = [];
     }
-    getParent() {
-        return this._parent;
-    }
     getChildren() {
         return this._children;
     }
