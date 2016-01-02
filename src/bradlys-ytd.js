@@ -11,9 +11,14 @@ setInterval(function(){
 }, 500);
 
 const BUTTON_APPEND_SELECTOR = '#watch8-secondary-actions';
+const VIDEO_TITLE_SELECTOR = '#watch-headline-title';
+const BRADLYS_YOUTUBE_DOWNLOADER_SELECTOR = '#bradlys-youtube-downloader';
+const BRADLYS_YOUTUBE_DOWNLOADER_ID = 'bradlys-youtube-downloader';
+const BRADLYS_YOUTUBE_DOWNLOADER_ERRORS_SELECTOR = '#bradlys-youtube-downloader .bytd-error';
+const ALTERNATIVE_FORMATS_MENU_NAME = 'Alternative Formats (Experimental) -->';
 
 //logging all errors that occur within the program
-var BYTDERRORS = {
+let BYTDERRORS = {
     errors: [],
     addError: function(err){
         this.errors.push(err);
@@ -23,19 +28,15 @@ var BYTDERRORS = {
 
 class Item {
     constructor(text, parent) {
-        if (typeof text === 'string' ) {
-            if (text.length < 0) {
-                throw 'Length of 0 String provided for Text.';
-            }
-        } else {
+        if (typeof text !== 'string' && text !== undefined) {
             throw 'Non-String type provided for Text.';
         }
         this._text = text;
-        let randomInt = intGen.next();
-        let selector = '#' + intGen;
+        let randomInt = 'bytd' + intGen.next().replace('.', '').replace('+', '');
+        let selector = '#' + randomInt;
         while (document.querySelector(selector)) {
-            randomInt = intGen.next();
-            selector = '#' + intGen;
+            randomInt = 'bytd' + intGen.next().replace('.', '').replace('+', '');
+            selector = '#' + randomInt;
         }
         this._id = randomInt;
         //this is where things get weird
@@ -46,10 +47,13 @@ class Item {
         }
     }
     getText() {
-        return this._text;
+        return this._text ? this._text : '';
     }
     getId() {
         return this._id;
+    }
+    setId(id) {
+        this._id = id;
     }
     getParent() {
         return this._parent;
@@ -75,9 +79,6 @@ class Link extends Item {
         } else if (typeof url === 'string') {
             if (url.length < 0) {
                 throw 'Length of 0 String provided for URL.';
-            }
-            if (!validateURL(url)) {
-                throw 'Invalid url format provided for URL.';
             }
         } else {
             throw 'Invalid type provided for URL.';
@@ -133,6 +134,26 @@ class Menu extends Item {
             throw 'Provided item is not an instance of Item.';
         }
     }
+    getMenuWithText(text) {
+        if (typeof text === 'string') {
+            //I am the menu with the text!
+            if (text === this.getText()) {
+                return this;
+            }
+            //or maybe my children menus have it?
+            for (let child of this.getChildren()) {
+                if (child instanceof Menu) {
+                    let submenu = child.getMenuWithText(text);
+                    if (submenu) {
+                        return submenu;
+                    }
+                }
+            }
+        } else {
+            throw 'Provided argument is not a string.';
+        }
+        return false;
+    }
     getHTML() {
         let text = this.getText();
         let id = this.getId();
@@ -141,14 +162,16 @@ class Menu extends Item {
             items += child.getHTML();
         }
         let menuTemplate =
-            `<button class="yt-uix-button yt-uix-button-size-default yt-uix-button-opacity yt-uix-button-has-icon no-icon-markup pause-resume-autoplay yt-uix-menu-trigger yt-uix-tooltip" type="button" onclick="return false;" aria-pressed="false" role="button" title="${text}" aria-haspopup="true" data-tooltip-text="${text}" aria-controls="${id}">
+        `<div class="yt-uix-menu" id="${id}">
+            <button class="yt-uix-button yt-uix-button-size-default yt-uix-button-opacity yt-uix-button-has-icon no-icon-markup pause-resume-autoplay yt-uix-menu-trigger yt-uix-tooltip" type="button" onclick="return false;" aria-pressed="false" role="button" title="${text}" aria-haspopup="true" data-tooltip-text="${text}" aria-labelledby="yt-uix-tooltip44-arialabel" aria-controls="aria-controls-${id}">
                 <span class="yt-uix-button-content">${text}</span>
             </button>
-            <div class="yt-uix-menu-content yt-ui-menu-content yt-uix-kbd-nav yt-uix-menu-content-hidden" role="menu" aria-expanded="false" id="${id}" style="min-width: 69px;">
+            <div class="yt-uix-menu-content yt-ui-menu-content yt-uix-kbd-nav yt-uix-menu-content-hidden" role="menu" aria-expanded="false" id="aria-controls-${id}" style="min-width: 69px;">
                 <ul tabindex="0" class="yt-uix-kbd-nav yt-uix-kbd-nav-list">
                 ${items}
                 </ul>
-            </div>`;
+            </div>
+        </div>`;
         return menuTemplate;
     }
 }
@@ -220,15 +243,6 @@ function getRandomIntInclusive(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function validateURL(textval) {
-    var urlregex = /^(https?|ftp):\/\/([a-zA-Z0-9.-]+(:[a-zA-Z0-9.&%$-]+)*@)*((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}|([a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.(com|edu|gov|int|mil|net|org|biz|arpa|info|name|pro|aero|coop|museum|[a-zA-Z]{2}))(:[0-9]+)*(\/($|[a-zA-Z0-9.,?'\\+&%$#=~_-]+))*$/;
-    return urlregex.test(textval);
-}
-
-function addErrorToView(message) {
-
-}
-
 /**
  * Adds the download button to the view.
  *
@@ -238,93 +252,55 @@ function addDownloadButtonToView(menu) {
     if (!(menu instanceof Menu)) {
         throw 'Provided menu is not an instance of Menu.';
     }
-    if (downloadButtonExist()) {
-        //update? Do nothing?
+    if (downloadButtonExists()) {
+        //Update it??? Yikes. :/
+        let html = menu.getHTML();
+        let currButton = document.querySelector(BRADLYS_YOUTUBE_DOWNLOADER_SELECTOR).outerHTML;
+        //there's no good solution for this at the moment beyond full replace.
+        if (currButton !== html) {
+            currButton.outerHTML = html;
+        }
+        return;
+    }
+    if (!downloadButtonAppendSectionExists()) {
+        throw 'Could not find region to append button.';
     }
     let html = menu.getHTML();
     let element = document.createElement('p');
     element.innerHTML = html;
-    for (let node of element.childNodes) {
-        document.querySelector(BUTTON_APPEND_SELECTOR).appendChild(node);
+    let appendTo = document.querySelector(BUTTON_APPEND_SELECTOR);
+    for (let node = 0; node < element.childNodes.length; node++) {
+        appendTo.appendChild(element.childNodes[node]);
     }
 }
 
-function downloadButtonExist() {
+function downloadButtonExists() {
+    return document.querySelector(BRADLYS_YOUTUBE_DOWNLOADER_SELECTOR) !== null;
+}
+
+function downloadButtonHasErrors() {
+    return document.querySelector(BRADLYS_YOUTUBE_DOWNLOADER_ERRORS_SELECTOR) !== null;
+}
+
+function downloadButtonAppendSectionExists() {
     return document.querySelector(BUTTON_APPEND_SELECTOR) !== null;
 }
 
-/**
- * Adds a link to the view. It will add the link to the download button.
- *
- * @param {Link} link - Link to be added to view.
- */
-function addLinkToView(link) {
-
-}
-
-/**
- * Business logic for creating the YouTube Downloader. Call this when you want to attempt to create the downloader.
- *
- * @returns {boolean}
- */
-function createYouTubeDownloader() {
-	var YTDHolderElement = document.getElementById('watch8-secondary-actions');
-	//if we can't find the element to append the button to then we should stop the program and wait for it to load
-	if (!YTDHolderElement) {
-		return false;
-	}
-	//ytplayer needs to be fully initialized for us to do anything
-	if (typeof ytplayer === 'undefined' || typeof ytplayer.config === 'undefined' || typeof ytplayer.config.args === 'undefined' || typeof ytplayer.config.args.url_encoded_fmt_stream_map === 'undefined') {
-		return false;
-	}
-    var existingElement = document.getElementById('bradlys-youtube-downloader');
-    //if the element already exists and there's no errors then we don't need this program to run anymore
-    if (existingElement && existingElement.getAttribute('class').indexOf('bytd-error') === -1) {
-        return false;
-    }
-    //get the video title if it exists
-    videoTitle = document.getElementById('watch-headline-title');
-    if (videoTitle) {
-        videoTitle = encodeURIComponent(videoTitle.children[0].innerText);
+function getVideoTitle() {
+    let vT = document.querySelector(VIDEO_TITLE_SELECTOR);
+    if (vT) {
+        vT = encodeURIComponent(vT.children[0].innerText);
     } else {
-        videoTitle = 'YouTube Video';
+        vT = 'YouTube Video';
     }
-	var videos = getYouTubeVideos();
-	//if no videos are returned then we don't need to create the youtube downloader element
-	if (!videos || videos.length < 1) {
-        //actually, we want to put up an error element instead
-        BYTDERRORS.addError('Issue retrieving videos. Returned empty.');
-		return false;
-	}
-    var YTDElement = videosToButton(videos);
-    if (!YTDElement || YTDElement.length < 1) {
-        //log something, maybe put up false downloader to report a problem
-        BYTDERRORS.addError('Issue converting videos to element.');
-        return false;
-    }
-	YTDHolderElement.appendChild(YTDElement);
+    return vT;
 }
 
-/**
- * Converts parsed videos Array into HTML Element used for downloading the videos.
- *
- * @param {Array} videos
- * @returns {Node}
- */
-function videosToButton(videos) {
-    var button = buttonTemplate.cloneNode(true);
-    //For each video, create a corresponding list object and add it to the YTD Element
-    var index, video, videoElement, visibleText, flagIndex;
-    var linkTemplate = button.querySelector('#bradlys-youtube-downloader-links-1').cloneNode(true);
-    linkTemplate.removeAttribute('id');
-    button.querySelector('#bradlys-youtube-downloader-links')
-        .removeChild(button.querySelector('#bradlys-youtube-downloader-links-1'));
-    var firstLinksPointer = button.querySelector('#bradlys-youtube-downloader-links');
-    var nestedLinksPointer = button.querySelector('#bradlys-youtube-downloader-nested-links');
-    var firstLinksNestedItem = button.querySelector('#bradlys-youtube-downloader-links-last');
-    for (index = 0; index < videos.length; index++) {
-        video = videos[index];
-        visibleText = [];
+function videosToMenu(videos) {
+    let menu = new Menu('Download');
+    menu.setId(BRADLYS_YOUTUBE_DOWNLOADER_ID);
+    for (let video of videos) {
+        let visibleText = [];
         if ('height' in video && 'width' in video) {
             visibleText.push(video.width + 'x' + video.height + 'p');
         } else if ('height' in video) {
@@ -347,8 +323,8 @@ function videosToButton(videos) {
             visibleText.push(video.abr + 'kbps');
         }
         if ('flags' in video) {
-            for (flagIndex = 0; flagIndex < video.flags.length; flagIndex++) {
-                visibleText.push(video.flags[flagIndex]);
+            for (let flag of video.flags) {
+                visibleText.push(flag);
             }
         }
         if ('video' in video && !('audio' in video)) {
@@ -357,17 +333,52 @@ function videosToButton(videos) {
             visibleText.push('AO');
         }
         visibleText = visibleText.join(' ');
-        videoElement = linkTemplate.cloneNode(true);
-        videoElement.getElementsByTagName('span')[0].innerText = visibleText;
-        videoElement.getElementsByTagName('a')[0].setAttribute('href', video.url);
+        //unfortunate but business logic has to be mixed in, I guess
+        let foundMenu = false;
         if ('video' in video && 'audio' in video) {
-            firstLinksPointer.insertBefore(videoElement, firstLinksNestedItem);
+            foundMenu = menu;
         } else {
-            videoElement.getElementsByTagName('a')[0].setAttribute('target', '_blank');
-            nestedLinksPointer.appendChild(videoElement);
+            foundMenu = menu.getMenuWithText(ALTERNATIVE_FORMATS_MENU_NAME);
+            if (!foundMenu) {
+                foundMenu = new Menu(ALTERNATIVE_FORMATS_MENU_NAME, menu);
+                menu.addChild(foundMenu);
+            }
         }
+        let link = new Link(visibleText, video.url, foundMenu);
+        foundMenu.addChild(link);
     }
-    return button;
+    return menu;
+}
+
+/**
+ * Business logic for creating the YouTube Downloader. Call this when you want to attempt to create the downloader.
+ *
+ * @returns {boolean}
+ */
+function createYouTubeDownloader() {
+	let YTDHolderElement = document.querySelector(BUTTON_APPEND_SELECTOR);
+	//if we can't find the element to append the button to then we should stop the program and wait for it to load
+	if (!YTDHolderElement) {
+		return false;
+	}
+	//ytplayer needs to be fully initialized for us to do anything
+	if (typeof ytplayer === 'undefined' || typeof ytplayer.config === 'undefined' || typeof ytplayer.config.args === 'undefined' || typeof ytplayer.config.args.url_encoded_fmt_stream_map === 'undefined') {
+		return false;
+	}
+    //if it exists and has no errors, we're good!
+    if (downloadButtonExists() && !downloadButtonHasErrors()) {
+        return false;
+    }
+    videoTitle = getVideoTitle();
+	let videos = getYouTubeVideos();
+	//if no videos are returned then we don't need to create the youtube downloader element
+	if (!videos || videos.length < 1) {
+        //actually, we want to put up an error element instead
+        BYTDERRORS.addError('Issue retrieving videos. Returned empty.');
+		return false;
+	}
+    let menu = videosToMenu(videos);
+    addDownloadButtonToView(menu);
 }
 
 /**
@@ -470,42 +481,14 @@ function parseVideoURIIntoObject(URI) {
     return video;
 }
 
-var videoTitle = 'YouTube Video';
-
-var buttonTemplate = document.createElement('div');
-buttonTemplate.id = "bradlys-youtube-downloader";
-buttonTemplate.className = 'yt-uix-menu';
-buttonTemplate.innerHTML =
-    '<button class="yt-uix-button yt-uix-button-size-default yt-uix-button-opacity yt-uix-button-has-icon no-icon-markup pause-resume-autoplay yt-uix-menu-trigger yt-uix-tooltip" type="button" onclick="return false;" aria-pressed="false" role="button" title="Download" aria-haspopup="true" data-tooltip-text="Download" aria-labelledby="yt-uix-tooltip44-arialabel" aria-controls="aria-menu-id-99">' +
-        '<span class="yt-uix-button-content">Download</span>' +
-    '</button>' +
-    '<div class="yt-uix-menu-content yt-ui-menu-content yt-uix-kbd-nav yt-uix-menu-content-hidden" role="menu" aria-expanded="false" id="aria-menu-id-99" style="min-width: 69px;">' +
-        '<ul tabindex="0" class="yt-uix-kbd-nav yt-uix-kbd-nav-list" id="bradlys-youtube-downloader-links">' +
-            '<li id="bradlys-youtube-downloader-links-1">' +
-                '<a href="" type="button" class="yt-ui-menu-item has-icon yt-uix-menu-close-on-select">' +
-                    '<span class="yt-ui-menu-item-label"></span>' +
-                '</a>' +
-            '</li>' +
-            '<li id="bradlys-youtube-downloader-links-last">' +
-                '<div class="yt-uix-menu">' +
-                    '<button class="yt-uix-button yt-uix-button-size-default yt-uix-button-opacity yt-uix-button-has-icon no-icon-markup pause-resume-autoplay yt-uix-menu-trigger yt-uix-tooltip" type="button" onclick="return false;" aria-pressed="false" role="button" title="Alternative Formats (experimental)" aria-haspopup="true" data-tooltip-text="Alternative Formats (experimental)" aria-labelledby="yt-uix-tooltip44-arialabel" aria-controls="aria-menu-id-999">' +
-                        '<span class="yt-uix-button-content">Alternative Formats (experimental) --></span>' +
-                    '</button>' +
-                    '<div class="yt-uix-menu-content yt-ui-menu-content yt-uix-kbd-nav yt-uix-menu-content-hidden" role="menu" aria-expanded="false" id="aria-menu-id-999" style="min-width: 69px;">' +
-                        '<ul tabindex="0" class="yt-uix-kbd-nav yt-uix-kbd-nav-list" id="bradlys-youtube-downloader-nested-links">' +
-                        '</ul>' +
-                    '</div>' +
-                '</div>' +
-            '</li>' +
-        '</ul>' +
-    '</div>';
+let videoTitle = 'YouTube Video';
 
 //URLs we have dispatched events for, we don't want to duplicate event calls too often.
-var dispatchedEvents = {};
+let dispatchedEvents = {};
 
 //video formats information taken from youtube-dl project
 //each number corresponds to a unique type of video format
-var YTVideoFormats = {
+let YTVideoFormats = {
     '5': {'ext': 'flv', 'width': 400, 'height': 240, 'audio': true, 'video': true},
     '6': {'ext': 'flv', 'width': 450, 'height': 270, 'audio': true, 'video': true},
     '13': {'ext': '3gp', 'width': 176, 'height': 144, 'format_note' : 'Mono', 'audio': true, 'video': true},
