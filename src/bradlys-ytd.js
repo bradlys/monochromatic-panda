@@ -10,8 +10,8 @@ setInterval(function(){
     }
 }, 500);
 
-const BUTTON_APPEND_SELECTOR = '#watch8-secondary-actions';
-const VIDEO_TITLE_SELECTOR = '#watch-headline-title';
+const BUTTON_APPEND_SELECTOR = '#menu-container > #menu > ytd-menu-renderer';
+const VIDEO_TITLE_SELECTOR = '.title.style-scope.ytd-video-primary-info-renderer';
 const BRADLYS_YOUTUBE_DOWNLOADER_SELECTOR = '#bradlys-youtube-downloader';
 const BRADLYS_YOUTUBE_DOWNLOADER_ID = 'bradlys-youtube-downloader';
 const BRADLYS_YOUTUBE_DOWNLOADER_ERRORS_SELECTOR = '#bradlys-youtube-downloader .bytd-error';
@@ -22,7 +22,7 @@ let BYTDERRORS = {
     errors: [],
     addError: function(err){
         this.errors.push(err);
-        addErrorToView(err);
+        //addErrorToView(err);
     }
 };
 
@@ -94,8 +94,8 @@ class Link extends Item {
         let url = this.getURL();
         let linkTemplate =
             `<li id="${id}">
-                <a href="${url}" type="button" class="yt-ui-menu-item has-icon yt-uix-menu-close-on-select">
-                    <span class="yt-ui-menu-item-label">${text}</span>
+                <a href="${url}" type="button">
+                    <span>${text}</span>
                 </a>
             </li>`;
         return linkTemplate;
@@ -162,15 +162,9 @@ class Menu extends Item {
             items += child.getHTML();
         }
         let menuTemplate =
-        `<div class="yt-uix-menu" id="${id}">
-            <button class="yt-uix-button yt-uix-button-size-default yt-uix-button-opacity yt-uix-button-has-icon no-icon-markup pause-resume-autoplay yt-uix-menu-trigger yt-uix-tooltip" type="button" onclick="return false;" aria-pressed="false" role="button" title="${text}" aria-haspopup="true" data-tooltip-text="${text}" aria-labelledby="yt-uix-tooltip44-arialabel" aria-controls="aria-controls-${id}">
-                <span class="yt-uix-button-content">${text}</span>
-            </button>
-            <div class="yt-uix-menu-content yt-ui-menu-content yt-uix-kbd-nav yt-uix-menu-content-hidden" role="menu" aria-expanded="false" id="aria-controls-${id}" style="min-width: 69px;">
-                <ul tabindex="0" class="yt-uix-kbd-nav yt-uix-kbd-nav-list">
-                ${items}
-                </ul>
-            </div>
+        `<button id="bradlys-youtube-downloader" onclick="var sibling = document.getElementById('bradlys-youtube-downloader-ul'); sibling.style.display = (sibling.style.display === 'block' ? 'none' : 'block');">Download</button>
+    	 <div style="display: none;" id='bradlys-youtube-downloader-ul'>
+    		<ul>${items}</ul>
         </div>`;
         return menuTemplate;
     }
@@ -289,7 +283,11 @@ function downloadButtonAppendSectionExists() {
 function getVideoTitle() {
     let vT = document.querySelector(VIDEO_TITLE_SELECTOR);
     if (vT) {
-        vT = encodeURIComponent(vT.children[0].innerText);
+    	try {
+	        vT = encodeURIComponent(vT.innerText);
+	    } catch (e) {
+	    	vT = 'YouTube Video';
+	    }
     } else {
         vT = 'YouTube Video';
     }
@@ -334,16 +332,20 @@ function videosToMenu(videos) {
         }
         visibleText = visibleText.join(' ');
         //unfortunate but business logic has to be mixed in, I guess
-        let foundMenu = false;
+        let foundMenu = menu;
+        
+        /* Nesting menus is ugly right now.
         if ('video' in video && 'audio' in video) {
             foundMenu = menu;
-        } else {
+        } 
+        else {
             foundMenu = menu.getMenuWithText(ALTERNATIVE_FORMATS_MENU_NAME);
             if (!foundMenu) {
                 foundMenu = new Menu(ALTERNATIVE_FORMATS_MENU_NAME, menu);
                 menu.addChild(foundMenu);
             }
         }
+        */
         let link = new Link(visibleText, video.url, foundMenu);
         foundMenu.addChild(link);
     }
