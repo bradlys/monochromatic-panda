@@ -21,6 +21,8 @@ Enable Developer Mode in Google Chrome and install the extension, [as described 
 
 A detailed video is [available here](https://www.youtube.com/watch?v=wRBKYiumhQI) that details error reporting, installation, updating, and a bit of troubleshooting.
 
+* I've since removed the dist folder and you should now use the src folder and use the unpacked files there.
+
 ## Contributing
 
 Contributions are always welcome!
