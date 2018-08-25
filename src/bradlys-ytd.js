@@ -1,4 +1,3 @@
-/*global ytplayer, decrypt_signature */
 'use strict';
 //Every 500ms, see if we can create the youtube downloader element
 setInterval(function () {
@@ -67,8 +66,8 @@ class Item {
 		let text = this.getText();
 		let linkTemplate =
 			`<li id="${id}">
-                <span class="yt-ui-menu-item-label">${text}</span>
-            </li>`;
+				<span class="yt-ui-menu-item-label">${text}</span>
+			</li>`;
 		return linkTemplate;
 	}
 }
@@ -100,10 +99,10 @@ class Link extends Item {
 		let url = this.getURL();
 		return `
 		<div id="${id}" role="menuitem" class="style-scope ytd-menu-popup-renderer">
-            <a class="style-scope ytd-menu-navigation-item-renderer" href="${url}">
-                <span class="style-scope ytd-menu-navigation-item-renderer">${text}</span>
-            </a>
-        </div>`
+			<a class="style-scope ytd-menu-navigation-item-renderer" href="${url}">
+				<span class="style-scope ytd-menu-navigation-item-renderer">${text}</span>
+			</a>
+		</div>`
 	}
 }
 
@@ -149,10 +148,10 @@ class Menu extends Item {
 			items += child.getHTML();
 		}
 		return `
-        <button id="bradlys-youtube-downloader" onclick="var sibling = document.getElementById('bradlys-youtube-downloader-ul'); sibling.style.display = (sibling.style.display === 'block' ? 'none' : 'block');">Download</button>
-        <div style="display: none;" id="bradlys-youtube-downloader-ul" class="style-scope ytd-menu-popup-renderer" role="menu">
-            ${items}
-        </div>
+		<button id="bradlys-youtube-downloader" onclick="var sibling = document.getElementById('bradlys-youtube-downloader-ul'); sibling.style.display = (sibling.style.display === 'block' ? 'none' : 'block');">Download</button>
+		<div style="display: none;" id="bradlys-youtube-downloader-ul" class="style-scope ytd-menu-popup-renderer" role="menu">
+			${items}
+		</div>
 		</iron-dropdown>`;
 	}
 }
