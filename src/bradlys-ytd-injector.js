@@ -13,7 +13,7 @@ function getContent(url) {
 				if (request.status === 200) {
 					resolve(request.responseText);
 				} else {
-					reject(false);
+					reject('');
 				}
 			}
 		};
@@ -24,7 +24,7 @@ function getContent(url) {
 
 /**
  * Gets the URL to a file that matches the needle from document.scripts
- * @returns {string|boolean} Will return the url string or will return false if not found
+ * @returns {string} Will return the url string or will return empty if not found
  */
 function getScriptURL(needle) {
 	let haystacks = document.scripts;
@@ -35,7 +35,7 @@ function getScriptURL(needle) {
 			return haystack;
 		}
 	}
-	return false;
+	return '';
 }
 
 function getDecryptionFunctionName(haystack) {
