@@ -26,118 +26,100 @@ function getContent(url) {
  * Gets the URL to a file that matches the needle from document.scripts
  * @returns {string|boolean} Will return the url string or will return false if not found
  */
-function getMatchingScript(needle) {
-	let scripts = document.scripts;
+function getScriptURL(needle) {
+	let haystacks = document.scripts;
 	// try to get a url for a script that has needle in it
-	for (let i of scripts) {
-		if (scripts[i].src && scripts[i].src.indexOf(needle) !== -1) {
-			return scripts[i].src;
+	for (let i of haystacks) {
+		let haystack = haystacks[i].src;
+		if (haystack && haystack.indexOf(needle) !== -1) {
+			return haystack;
 		}
 	}
 	return false;
 }
 
-function getDecryptionSignatureFunctionName(haystack) {
-	// First attempt at finding the main execution function for the decryption algorithm. This works usually.
-	let functionName = haystack.match(/\.set\("signature",([^\(]*)\(/);
+function getDecryptionFunctionName(haystack) {
+	// Use two different methods for getting the decryption function name. These vary but generally have these traits.
+	// look for something like: `signature", functionName(` <-- capture functionName
+	let gen2 = /signature['"]\s*,\s*([a-zA-Z0-9$]+)\(/;
+	// look for something like: `.sig||functionName(` <-- capture functionName
+	let gen1 = /\.sig\|\|([a-zA-Z0-9$]+)\(/;
+	let functionName = haystack.match(gen1);
 	if (!functionName) {
-		return false;
+		functionName = haystack.match(gen2);
 	}
+	if (!functionName) return '';
 	return functionName[1];
 }
 
-function getFunction(functionName, haystack) {
-	let mainFunction = parseMethodFromScript(functionName, haystack);
-	if (!mainFunction) {
-		return false;
-	}
-	let subFunction = parseSubFunctionFromMethodAndScript(mainFunction, functionName, haystack);
+function getFunction(needle, haystack) {
+	// group 1 is the function declaration up to but not including params. (3 different attempts) But don't capture it
+	// group 2 is the params declaration
+	// group 3 is the code for the function
+	// JS doesn't support named capture groups (annoying!)
+	let escaped_needle = regexEscapeString(needle);
+	let functionCaptureRegex = `
+	(?:function\\s+${ escaped_needle } | [{;,]\\s*${ escaped_needle }\\s*=\\s*function | var\\s+${ escaped_needle }\\s*=\\s*function)\\s*
+	\\(([^)]*)\\)
+	\\s*{([^}]+)}`.replace(/\s/g, ''); // JS has no free-spacing mode (also annoying!)
+
+	let match = haystack.match(new RegExp(functionCaptureRegex), 'g');
+	if (!match) return getObject(needle, haystack);
+
+	let params = match[1]; // Although labeled params - this is usually 1 parameter with YouTube code.
+	let code = match[2];
+	let needleFunction = `var ${ needle } = function(${ params }) { ${ code } }`;
+
+	let subFunction = getFirstSubFunction(needleFunction, params, needle, haystack);
+	// if no subfunctions inside then we can just pass back the needleFunction we made
 	if (!subFunction) {
-		return false;
+		return needleFunction;
 	}
-	if (mainFunction[mainFunction.length - 1] !== ';') {
-		mainFunction += ';';
-	}
-	if (subFunction[subFunction.length - 1] !== ';') {
-		subFunction += ';';
-	}
-	return 'function (sig) { ' +
-		subFunction + ' ' +
-		mainFunction +
-		' return ' + functionName + '(sig);};';
+
+	// otherwise, we need to add the subfunction code to the inside of the code.
+	// Basically, put it in the same scope while retaining function names.
+	return `var ${ needle } = function(${ params }) {
+		${ subFunction }
+		${ code }
+	};`;
 }
 
 /**
- * Returns the declaration of a method when given the provided method name and haystack to search.
- *
- * @param methodName name of the method to search for
- * @param haystack string to search in
- * @returns {boolean|string}
+ * Given a haystack and needle, get the declaration of the needle in the haystack. Presuming it's an object declaration.
+ * @param {string} needle
+ * @param {string} haystack
+ * @returns {string}
  */
-function parseMethodFromScript(methodName, haystack) {
-	methodName = regexEscapeString(methodName);
-	let methodMatch = haystack.match(new RegExp("(var " + methodName + "={[\\S\\s]*?(?=}};)}};)"), 'm');
-	if (!methodMatch) {
-		methodMatch = haystack.match(new RegExp("(var " + methodName + "=function\\([\\w$]+\\){[^}]*};)", 'm'));
-	}
-	if (!methodMatch) {
-		methodMatch = haystack.match(new RegExp("(function " + methodName + "\\([\\w$]+\\){[^}]*};)", 'm'));
-	}
-	if (!methodMatch) {
-		methodMatch = haystack.match(new RegExp("(" + methodName + "=function\\([\\w$]+\\){[^}]*})", 'm'));
-	}
-	if (!methodMatch) {
-		return false;
-	}
-	return methodMatch[1];
+function getObject(needle, haystack) {
+	let escaped_needle = regexEscapeString(needle);
+	let match = haystack.match(new RegExp("(var " + escaped_needle + "={[\\S\\s]*?(?=}};)}};)"), 'm');
+	if (!match) return '';
+	return match[1];
 }
 
 /**
- * Returns the first parameter of the provided method that is within the haystack.
- *
- * @param methodName name of the method to search for
- * @param haystack string to search in
- * @returns {boolean|string}
- */
-function parseMethodParameterFromScript(methodName, haystack) {
-	methodName = regexEscapeString(methodName);
-	let methodMatch = haystack.match(new RegExp("function " + methodName + "\\(([\\w$]+)\\){[^}]*};", 'm'));
-	if (!methodMatch) {
-		methodMatch = haystack.match(new RegExp("var " + methodName + "=function\\(([\\w$]+)\\){[^}]*};", 'm'));
-	}
-	if (!methodMatch) {
-		methodMatch = haystack.match(new RegExp(methodName + "=function\\(([\\w$]+)\\){[^}]*}", 'm'));
-	}
-	if (!methodMatch) {
-		return false;
-	}
-	return methodMatch[1];
-}
-
-/**
- * Obtains the first subfunction reference out of the provided method and then
+ * Obtains the first subfunction reference out of the provided haystack and then
  * returns that subfunction's declaration.
  *
- * @param method method to look for subfunctions in
- * @param methodName method name of the method provided
- * @param script script to search
- * @returns {boolean|string}
+ * WARNING: This is not a very generic method - as it is specifically tuned for YouTube.
+ * Unlike getFunction which is more generic.
+ *
+ * @param {string} haystack haystack to look for subfunctions in
+ * @param {string} haystackParameter function
+ * @param {string} needle function to look for
+ * @param {string} script script to search
+ * @returns {string}
  */
-function parseSubFunctionFromMethodAndScript(method, methodName, script) {
-	let methodParameter = parseMethodParameterFromScript(methodName, method);
-	if (!methodParameter) {
-		return false;
-	}
-	methodParameter = regexEscapeString(methodParameter);
-	let firstSubFunctionName = method.match(new RegExp("([\\w$]+)\\.[\\w$]+\\(" + methodParameter + "[^)]*\\)", 'm'));
-	if (!firstSubFunctionName) {
-		return false;
-	}
-	firstSubFunctionName = firstSubFunctionName[1];
-	let subFunction = parseMethodFromScript(firstSubFunctionName, script);
-	if (!subFunction) {
-		return false;
-	}
+function getFirstSubFunction(haystack, haystackParameter, needle, script) {
+	haystackParameter = regexEscapeString(haystackParameter);
+	// We know that the code generally is like `XX.YY(haystackParameter, arg2);` - Not bulletproof but good enough
+	let firstSubFunctionName = haystack.match(new RegExp("([\\w$]+)\\.[\\w$]+\\(" + haystackParameter + "[^)]*\\)", 'm'));
+	if (!firstSubFunctionName) return '';
+
+	// Need to look for the function in the entire script
+	let subFunction = getFunction(firstSubFunctionName[1], script);
+	if (!subFunction) return '';
+
 	return subFunction;
 }
 
@@ -149,8 +131,7 @@ function parseSubFunctionFromMethodAndScript(method, methodName, script) {
  * @returns {string}
  */
 function regexEscapeString(string) {
-	string = string.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
-	return string;
+	return string.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
 }
 
 /**
@@ -162,14 +143,14 @@ function regexEscapeString(string) {
 function putDecryptionSignatureIntoState(url) {
 	if (!url) {
 		// try to get a script that has html5player in the url
-		url = getMatchingScript('html5player');
+		url = getScriptURL('html5player');
 		// if not that then try to get a script that has player in the url
-		if (!url) url = getMatchingScript('player');
+		if (!url) url = getScriptURL('player');
 		if (!url) return new Promise(function(resolve, reject) { reject(false); });
 	}
 	let p = getContent(url);
-	p.then(function(text) {
-		let functionName = getDecryptionSignatureFunctionName(text);
+	return p.then(function(text) {
+		let functionName = getDecryptionFunctionName(text);
 		if (!functionName) return false;
 
 		let func = getFunction(functionName, text);
@@ -191,7 +172,14 @@ document.addEventListener('BYTD_connectExtension', function(e) {
 			if (!url) return;
 			// since we know the URL now and know that this is in state, we can add the function to the DOM.
 			let scriptElement = document.createElement('script');
-			scriptElement.innerText = 'decrypt_signature = ' + URLToDecryptionFunction[url];
+			// Get function name and then wrap the function in decrypt_signature so that we can call it consistently.
+			let func = URLToDecryptionFunction[url];
+			let funcName = func.slice(4, func.indexOf('=')-1);
+
+			scriptElement.innerText = `decrypt_signature = function(zzzz) {
+				${ func }
+				return ${ funcName }(zzzz);
+			}`;
 			scriptElement.onload = function() { this.parentNode.removeChild(this);};
 			(document.head||document.documentElement).appendChild(scriptElement);
 		});
