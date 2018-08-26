@@ -1,4 +1,3 @@
-/*global ytplayer, decrypt_signature */
 'use strict';
 //Every 500ms, see if we can create the youtube downloader element
 setInterval(function () {
@@ -11,10 +10,12 @@ setInterval(function () {
 
 const BUTTON_APPEND_SELECTOR = '#menu-container > #menu > ytd-menu-renderer';
 const VIDEO_TITLE_SELECTOR = '.title.style-scope.ytd-video-primary-info-renderer';
-const BRADLYS_YOUTUBE_DOWNLOADER_SELECTOR = '#bradlys-youtube-downloader';
+const BRADLYS_YOUTUBE_DOWNLOADER_BUTTON_SELECTOR = '#bradlys-youtube-downloader';
+const BRADLYS_YOUTUBE_DOWNLOADER_UL_SELECTOR = '#bradlys-youtube-downloader-ul';
 const BRADLYS_YOUTUBE_DOWNLOADER_ID = 'bradlys-youtube-downloader';
 const BRADLYS_YOUTUBE_DOWNLOADER_ERRORS_SELECTOR = '#bradlys-youtube-downloader .bytd-error';
 const ALTERNATIVE_FORMATS_MENU_NAME = 'Alternative Formats (Experimental) -->';
+let LAST_LOCATION_HREF = '';
 
 //logging all errors that occur within the program
 let BYTDERRORS = {
@@ -67,8 +68,8 @@ class Item {
 		let text = this.getText();
 		let linkTemplate =
 			`<li id="${id}">
-                <span class="yt-ui-menu-item-label">${text}</span>
-            </li>`;
+				<span class="yt-ui-menu-item-label">${text}</span>
+			</li>`;
 		return linkTemplate;
 	}
 }
@@ -100,10 +101,10 @@ class Link extends Item {
 		let url = this.getURL();
 		return `
 		<div id="${id}" role="menuitem" class="style-scope ytd-menu-popup-renderer">
-            <a class="style-scope ytd-menu-navigation-item-renderer" href="${url}">
-                <span class="style-scope ytd-menu-navigation-item-renderer">${text}</span>
-            </a>
-        </div>`
+			<a class="style-scope ytd-menu-navigation-item-renderer" href="${url}">
+				<span class="style-scope ytd-menu-navigation-item-renderer">${text}</span>
+			</a>
+		</div>`
 	}
 }
 
@@ -149,11 +150,10 @@ class Menu extends Item {
 			items += child.getHTML();
 		}
 		return `
-        <button id="bradlys-youtube-downloader" onclick="var sibling = document.getElementById('bradlys-youtube-downloader-ul'); sibling.style.display = (sibling.style.display === 'block' ? 'none' : 'block');">Download</button>
-        <div style="display: none;" id="bradlys-youtube-downloader-ul" class="style-scope ytd-menu-popup-renderer" role="menu">
-            ${items}
-        </div>
-		</iron-dropdown>`;
+		<button id="bradlys-youtube-downloader" onclick="var sibling = document.getElementById('bradlys-youtube-downloader-ul'); sibling.style.display = (sibling.style.display === 'block' ? 'none' : 'block');">Download</button>
+		<div style="display: none;" id="bradlys-youtube-downloader-ul" class="style-scope ytd-menu-popup-renderer" role="menu">
+			${items}
+		</div>`;
 	}
 }
 
@@ -242,7 +242,7 @@ function addDownloadButtonToView(menu) {
 	if (downloadButtonExists()) {
 		//Update it??? Yikes. :/
 		let html = menu.getHTML();
-		let currButton = document.querySelector(BRADLYS_YOUTUBE_DOWNLOADER_SELECTOR).outerHTML;
+		let currButton = document.querySelector(BRADLYS_YOUTUBE_DOWNLOADER_BUTTON_SELECTOR).outerHTML;
 		//there's no good solution for this at the moment beyond full replace.
 		if (currButton !== html) {
 			currButton.outerHTML = html;
@@ -256,6 +256,7 @@ function addDownloadButtonToView(menu) {
 	let element = document.createElement('p');
 	element.innerHTML = html;
 	let appendTo = document.querySelector(BUTTON_APPEND_SELECTOR);
+	LAST_LOCATION_HREF = window.location.href;
 	// Take newly created nodes and append them to the selected element.
 	while (element.childNodes.length) {
 		appendTo.appendChild(element.childNodes[0]);
@@ -263,11 +264,20 @@ function addDownloadButtonToView(menu) {
 }
 
 function downloadButtonExists() {
-	return document.querySelector(BRADLYS_YOUTUBE_DOWNLOADER_SELECTOR) !== null;
+	return document.querySelector(BRADLYS_YOUTUBE_DOWNLOADER_BUTTON_SELECTOR) !== null;
 }
 
 function downloadButtonHasErrors() {
 	return document.querySelector(BRADLYS_YOUTUBE_DOWNLOADER_ERRORS_SELECTOR) !== null;
+}
+
+function downloadButtonIsOld() {
+	return window.location.href !== LAST_LOCATION_HREF || ![getVideoTitle(), 'YouTube Video'].includes(videoTitle);
+}
+
+function removeDownloadButton() {
+	document.querySelector(BRADLYS_YOUTUBE_DOWNLOADER_BUTTON_SELECTOR).remove();
+	document.querySelector(BRADLYS_YOUTUBE_DOWNLOADER_UL_SELECTOR).remove();
 }
 
 function downloadButtonAppendSectionExists() {
@@ -363,7 +373,12 @@ function createYouTubeDownloader() {
 	}
 	//if it exists and has no errors, we're good!
 	if (downloadButtonExists() && !downloadButtonHasErrors()) {
-		return false;
+		// we also need to check that it does exist but because of page redirection - it's outdated
+		if (downloadButtonIsOld()) {
+			removeDownloadButton();
+		} else {
+			return false;
+		}
 	}
 	videoTitle = getVideoTitle();
 	let videos = getYouTubeVideos();
