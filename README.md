@@ -5,7 +5,9 @@ Google Chrome Extension for Downloading YouTube Videos
 
 Download YouTube videos without pain. Inserts a dropdown button with links to directly download the current video from YouTube in multiple formats. Easily integrates with the UI and does not interfere or rely on third party resources.  
 
-As of December 20th, 2015, Google removed the extension from their web store. Currently, this extension may not work for many videos as YouTube has updated its code related to a decryption algorithm. It is recommended you follow/watch/star this repo and I'll release fixes for the issues as I can.
+As of December 20th, 2015, Google removed the extension from their web store. 
+
+If there are any issues, please do not hesitate to create an issue here on Github so that I can fix it! Always follow this repository for any updates as I do sincerely try to update this as I can.
 
 ## Usage
 
