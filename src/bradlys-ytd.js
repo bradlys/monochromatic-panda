@@ -368,7 +368,7 @@ function createYouTubeDownloader() {
 		return false;
 	}
 	//ytplayer needs to be fully initialized for us to do anything
-	if (typeof ytplayer === 'undefined' || typeof ytplayer.config === 'undefined' || typeof ytplayer.config.args === 'undefined' || typeof ytplayer.config.args.url_encoded_fmt_stream_map === 'undefined') {
+	if (typeof window.ytplayer === 'undefined' || typeof window.ytplayer.config === 'undefined' || typeof window.ytplayer.config.args === 'undefined' || typeof window.ytplayer.config.args.url_encoded_fmt_stream_map === 'undefined') {
 		return false;
 	}
 	//if it exists and has no errors, we're good!
@@ -399,14 +399,14 @@ function createYouTubeDownloader() {
  */
 function getYouTubeVideos() {
 	//Make sure that the ytplayer variable is there and properly initialized
-	if (!(typeof ytplayer !== 'undefined' && typeof ytplayer.config !== 'undefined' && typeof ytplayer.config.args !== 'undefined')) {
+	if (!(typeof window.ytplayer !== 'undefined' && typeof window.ytplayer.config !== 'undefined' && typeof window.ytplayer.config.args !== 'undefined')) {
 		return false;
 	}
 	//grab the videos out of the ytplayer variable
 	let videos = [];
 	let video, index, YTPlayerVideos;
-	if (ytplayer.config.args.url_encoded_fmt_stream_map) {
-		YTPlayerVideos = ytplayer.config.args.url_encoded_fmt_stream_map.split(',');
+	if (window.ytplayer.config.args.url_encoded_fmt_stream_map) {
+		YTPlayerVideos = window.ytplayer.config.args.url_encoded_fmt_stream_map.split(',');
 		//parse out the information for each video and put it into the videos variable
 		for (index = 0; index < YTPlayerVideos.length; index++) {
 			video = parseVideoURIIntoObject(YTPlayerVideos[index]);
@@ -416,8 +416,8 @@ function getYouTubeVideos() {
 		}
 	}
 	//If we don't have adaptive formats available then just return videos we have so far.
-	if (ytplayer.config.args.adaptive_fmts) {
-		YTPlayerVideos = ytplayer.config.args.adaptive_fmts.split(',');
+	if (window.ytplayer.config.args.adaptive_fmts) {
+		YTPlayerVideos = window.ytplayer.config.args.adaptive_fmts.split(',');
 		//parse out the information for each video and put it into the videos variable
 		for (index = 0; index < YTPlayerVideos.length; index++) {
 			video = parseVideoURIIntoObject(YTPlayerVideos[index]);
@@ -459,7 +459,7 @@ function parseVideoURIIntoObject(URI) {
 	}
 	//if we found them then let's fetch the relevant information
 	//and add it to the videos list
-	if (url.length > 0 && itag !== 0) {
+	if (url.length > 0 && itag !== 0 && itag in YTVideoFormats) {
 		//copy base itag information over
 		video = YTVideoFormats[itag];
 		//add in the URL
@@ -467,12 +467,12 @@ function parseVideoURIIntoObject(URI) {
 		//if the url doesn't contain the signature then we need to add it to the URL
 		if (url.indexOf('signature') < 1 && signature.length > 0) {
 			try {
-				if (!(ytplayer.config.assets.js in dispatchedEvents)) {
+				if (!(window.ytplayer.config.assets.js in dispatchedEvents)) {
 					let event = new CustomEvent('BYTD_connectExtension', {
-						detail: ytplayer.config.assets.js
+						detail: window.ytplayer.config.assets.js
 					});
 					document.dispatchEvent(event);
-					dispatchedEvents[ytplayer.config.assets.js] = true;
+					dispatchedEvents[window.ytplayer.config.assets.js] = true;
 				}
 				//and if we have to add it then we need to decrypt it too
 				//This is the single biggest source of the entire thing breaking.
